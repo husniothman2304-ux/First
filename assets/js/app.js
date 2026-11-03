@@ -67,9 +67,18 @@ const draftBadge = (i) => (i.published ? '' : '<span class="pill draft">Draft</s
 const tagsHTML = (tags) =>
   tags && tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : '';
 
+// Cards and galleries show the tiny preview first, then swap in a sharp
+// version (the medium size, or the full photo for older uploads) once the
+// picture is on screen. See upgradeImage() further down.
+function hiresAttr(i) {
+  const hi = i.mediumUrl || i.imageUrl;
+  if (!i.thumbUrl || !hasImg(hi) || hi === i.thumbUrl) return '';
+  return ` data-hires="${esc(hi)}"`;
+}
+
 function coverHTML(i) {
   const thumb = i.thumbUrl || i.imageUrl;
-  if (hasImg(thumb)) return `<div class="cover"><img ${imgSrc(thumb)} alt="" loading="lazy"></div>`;
+  if (hasImg(thumb)) return `<div class="cover"><img ${imgSrc(thumb)}${hiresAttr(i)} alt="" loading="lazy"></div>`;
   const letter = (i.title || '?').trim().charAt(0).toUpperCase();
   return `<div class="cover placeholder" style="--h:${hue(i.id)}"><span>${esc(letter)}</span></div>`;
 }
@@ -153,7 +162,7 @@ const noteRow = (i) => `
 
 const photoTile = (i) => `
   <a class="photo" href="${itemHref(i)}">
-    <img ${imgSrc(i.thumbUrl || i.imageUrl)} alt="${esc(i.title || 'Photo')}" loading="lazy">
+    <img ${imgSrc(i.thumbUrl || i.imageUrl)}${hiresAttr(i)} alt="${esc(i.title || 'Photo')}" loading="lazy">
     ${i.title ? `<span class="caption">${esc(i.title)}</span>` : ''}
     ${i.published ? '' : '<span class="pill draft corner">Draft</span>'}
   </a>`;
@@ -799,7 +808,7 @@ function openEditor(type, item = null) {
     cover: true,
     tags: type !== 'photo',
   };
-  const it = { title: '', summary: '', link: '', tags: [], body: '', published: true, imageUrl: '', imagePath: '', thumbUrl: '', ...(item || {}) };
+  const it = { title: '', summary: '', link: '', tags: [], body: '', published: true, imageUrl: '', imagePath: '', thumbUrl: '', mediumUrl: '', mediumPath: '', ...(item || {}) };
   const coverPreview = (url) => (hasImg(url)
     ? `<img ${imgSrc(url)} alt="">`
     : `${icon('photos', 'xl')}<span>${type === 'photo' ? 'Choose a photo' : 'Add a cover image (optional)'}</span>`);
@@ -896,7 +905,7 @@ function openEditor(type, item = null) {
         if (!f) return;
         const t = toast('Uploading image…', 'info', 0);
         try {
-          const up = await api.uploadImage(await resizeImage(f, 1800));
+          const up = await api.uploadImage(await resizeImage(f, 2400, 0.95));
           const alt = f.name.replace(/\.[^.]+$/, '').replace(/[[\]]/g, '');
           ta.setRangeText(`\n![${alt}](${up.url})\n`, ta.selectionStart, ta.selectionEnd, 'end');
           ta.focus();
@@ -925,11 +934,15 @@ function openEditor(type, item = null) {
             let imageUrl = removeCover ? '' : it.imageUrl;
             let imagePath = removeCover ? '' : it.imagePath;
             let thumbUrl = removeCover ? '' : (it.thumbUrl || '');
+            let mediumUrl = removeCover ? '' : (it.mediumUrl || '');
+            let mediumPath = removeCover ? '' : (it.mediumPath || '');
             if (coverFile) {
-              const up = await api.uploadImage(await resizeImage(coverFile, type === 'photo' ? 2400 : 1800));
+              const up = await api.uploadImage(await resizeImage(coverFile, 2400, 0.95), { medium: true });
               imageUrl = up.url;
               imagePath = up.path;
               thumbUrl = up.thumbUrl || '';
+              mediumUrl = up.mediumUrl || '';
+              mediumPath = up.mediumPath || '';
             }
             const data = {
               type,
@@ -942,9 +955,12 @@ function openEditor(type, item = null) {
               imageUrl,
               imagePath,
               thumbUrl,
+              mediumUrl,
+              mediumPath,
             };
             const id = await api.saveItem(item ? item.id : null, data);
             if (it.imagePath && it.imagePath !== imagePath) api.deleteUpload(it.imagePath).catch(() => {});
+            if (it.mediumPath && it.mediumPath !== mediumPath) api.deleteUpload(it.mediumPath).catch(() => {});
             close();
             toast(item ? 'Saved' : `${s.one[0].toUpperCase() + s.one.slice(1)} added`);
             const target = `#/p/${encodeURIComponent(id)}`;
@@ -973,10 +989,11 @@ function uploadPhotos() {
     let failed = 0;
     for (const f of files) {
       try {
-        const up = await api.uploadImage(await resizeImage(f, 2400));
+        const up = await api.uploadImage(await resizeImage(f, 2400, 0.95), { medium: true });
         await api.saveItem(null, {
           type: 'photo', title: '', summary: '', link: '', tags: [], body: '',
           published: true, imageUrl: up.url, imagePath: up.path, thumbUrl: up.thumbUrl || '',
+          mediumUrl: up.mediumUrl || '', mediumPath: up.mediumPath || '',
         });
         done++;
       } catch (e) {
@@ -1190,7 +1207,44 @@ function resolveImages() {
       .catch((e) => { console.warn('Image failed to load', id, e); imageCache.delete(id); });
   });
 }
-new MutationObserver(resolveImages).observe(document.body, { childList: true, subtree: true });
+// Sharp versions for cards and galleries, loaded as each picture nears the screen.
+async function upgradeImage(img) {
+  const hi = img.dataset.hires;
+  img.removeAttribute('data-hires');
+  try {
+    const id = fsImageId(hi);
+    let src = '';
+    if (id) {
+      if (!imageCache.has(id)) imageCache.set(id, api.getImage(id));
+      src = await imageCache.get(id);
+    } else {
+      src = safeUrl(hi);
+    }
+    if (!safeUrl(src) || !img.isConnected) return;
+    const pre = new Image();
+    pre.src = src;
+    await pre.decode().catch(() => {});
+    img.src = src;
+    img.classList.add('hires');
+  } catch (e) {
+    console.warn('Sharp image failed to load', e);
+  }
+}
+const hiresWatcher = 'IntersectionObserver' in window
+  ? new IntersectionObserver((entries) => entries.forEach((en) => {
+    if (!en.isIntersecting) return;
+    hiresWatcher.unobserve(en.target);
+    upgradeImage(en.target);
+  }), { rootMargin: '400px 0px' })
+  : null;
+function watchHires() {
+  $$('img[data-hires]:not([data-watching])').forEach((img) => {
+    img.dataset.watching = '1';
+    if (hiresWatcher) hiresWatcher.observe(img); else upgradeImage(img);
+  });
+}
+
+new MutationObserver(() => { resolveImages(); watchHires(); }).observe(document.body, { childList: true, subtree: true });
 
 // ── Boot ────────────────────────────────────────────────────
 try {

@@ -161,7 +161,7 @@ export async function deleteMessage(id) {
 // ── Uploads (stored as small data URLs) ─────────────────────
 export async function uploadImage(blob) {
   const url = await blobToDataUrl(await resizeImage(blob, 1100, 0.8, 150e3));
-  return { url, path: 'demo/' + newId(), thumbUrl: '' };
+  return { url, path: 'demo/' + newId(), thumbUrl: '', mediumUrl: '', mediumPath: '' };
 }
 
 export async function getImage() { return ''; }

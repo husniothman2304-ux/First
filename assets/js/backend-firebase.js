@@ -111,7 +111,7 @@ export async function deleteItem(id) {
   await deleteDoc(doc(db, 'items', id));
   if (!item) return;
   // Also remove the cover image and any images placed inside the text.
-  const paths = new Set(item.imagePath ? [item.imagePath] : []);
+  const paths = new Set([item.imagePath, item.mediumPath].filter(Boolean));
   for (const m of String(item.body || '').matchAll(/#fsimg-([A-Za-z0-9]{1,40})/g)) paths.add(`images/${m[1]}`);
   await Promise.all([...paths].map((p) => deleteUpload(p).catch(() => {})));
 }
@@ -156,14 +156,25 @@ export async function deleteMessage(id) {
 // A Firestore document can hold at most 1 MiB, so the full image is squeezed
 // under ~900 KB. A small thumbnail is returned too, which the page keeps
 // inside the item itself so galleries and cards load without extra reads.
-const FULL_STEPS = [[1600, 0.82], [1400, 0.76], [1200, 0.72], [1000, 0.68], [800, 0.62]];
+// Three sizes per photo:
+//  - full:    the sharpest version that fits (up to 2048 px), shown when a photo is opened
+//  - medium:  sharp enough for cards and galleries on high-resolution screens (1200 px)
+//  - thumb:   tiny preview kept inside the item, shown instantly while the medium loads
+const FULL_STEPS = [[2048, 0.86], [1800, 0.84], [1600, 0.82], [1400, 0.78], [1200, 0.72], [1000, 0.68]];
+const MEDIUM_STEPS = [[1200, 0.84], [1080, 0.8], [960, 0.76], [800, 0.72]];
 const THUMB_STEPS = [[560, 0.72], [440, 0.66], [340, 0.6]];
 
-export async function uploadImage(blob) {
+export async function uploadImage(blob, { medium = false } = {}) {
   const full = await fitDataUrl(blob, FULL_STEPS, 900_000);
   const thumbUrl = await fitDataUrl(blob, THUMB_STEPS, 70_000);
   const r = await addDoc(collection(db, 'images'), { data: full, createdAt: serverTimestamp() });
-  return { url: `#fsimg-${r.id}`, path: `images/${r.id}`, thumbUrl };
+  const out = { url: `#fsimg-${r.id}`, path: `images/${r.id}`, thumbUrl, mediumUrl: '', mediumPath: '' };
+  if (medium) {
+    const mid = await fitDataUrl(blob, MEDIUM_STEPS, 380_000);
+    const m = await addDoc(collection(db, 'images'), { data: mid, createdAt: serverTimestamp() });
+    Object.assign(out, { mediumUrl: `#fsimg-${m.id}`, mediumPath: `images/${m.id}` });
+  }
+  return out;
 }
 
 export async function getImage(id) {
