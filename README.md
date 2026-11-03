@@ -1,12 +1,12 @@
 # My personal website
 
-A personal site for **projects, notes, blog posts and photos**, with a frosted-glass design in light and dark mode. It is plain HTML, CSS and JavaScript with no build step.
+A personal site with an **About me** page, **Projects**, **Course** notes and a private **Contact** chat, with a frosted-glass design in light and dark mode. It is plain HTML, CSS and JavaScript with no build step.
 
 - **Only you can edit.** You sign in with Google to add, edit, delete and upload. Firebase security rules enforce this on the server, so hiding the buttons is not what keeps others out.
-- **Visitors can comment** on any published post, project, note or photo.
-- **Visitors can send you private messages.** Only you can read them, in your Inbox.
+- **Visitors can comment** on any published project or course note.
+- **Visitors can chat with you privately** from the Contact page (text, photos, stickers). You reply from your Inbox.
 - **Drafts.** Turn off "Published" to keep something visible only to you.
-- **Uploads.** Cover images, photo gallery (several photos at once), and images inside posts. Photos are compressed in the browser (up to 1600 px) and stored in the Firestore database, so everything runs on Firebase's free **Spark** plan. No Cloud Storage or payment card is needed.
+- **Uploads.** Cover images and images inside projects and course notes. Photos are compressed in the browser (up to 1600 px) and stored in the Firestore database, so everything runs on Firebase's free **Spark** plan. No Cloud Storage or payment card is needed.
 - **Markdown** for writing, with a live preview.
 
 ## Try it locally (demo mode)
@@ -54,13 +54,12 @@ Paste the values into `FIREBASE_CONFIG` in [`assets/js/config.js`](assets/js/con
 ## Using the site
 | You want to… | Do this |
 | --- | --- |
-| Add a project, note or post | **+** in the top bar, or **New …** on a section page |
-| Upload photos | **Photos → Upload photos** (pick several at once) |
+| Add a project or course note | **+** in the top bar, or **New …** on the Projects or Course page |
 | Put an image inside a post | **Insert image** above the text box in the editor |
 | Edit or delete something | Open it, then **Edit** / **Delete** |
 | Hide something for now | Turn off **Published** in the editor (it becomes a draft) |
-| Change your name, bio or picture | **Home → Edit profile** |
-| Read private messages | **Inbox** icon in the top bar (the red badge counts unread ones) |
+| Change your headline, name, bio or picture | **About me → Edit profile** |
+| Read and reply to chats | **Inbox** icon in the top bar (the red badge counts unread ones) |
 | Remove a comment | Trash icon next to the comment (only you see it) |
 
 ## How it's organised

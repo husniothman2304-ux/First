@@ -14,7 +14,7 @@ function seed() {
   const now = Date.now();
   const items = [
     {
-      id: 'welcome', type: 'blog', published: true, createdAt: now - DAY,
+      id: 'welcome', type: 'note', published: true, createdAt: now - DAY,
       title: 'Hello, world',
       summary: 'Why I made this little corner of the internet.',
       tags: ['personal'],
@@ -26,7 +26,7 @@ function seed() {
       summary: 'A glassy personal site in plain HTML, CSS and JavaScript, powered by Firebase.',
       link: 'https://github.com/husniothman2304-ux/First',
       tags: ['html', 'css', 'javascript', 'firebase'],
-      body: "## Features\n\n- Projects, notes, blog and photo gallery\n- Only the owner can add, edit and upload\n- Visitors can leave comments and send private messages\n- Frosted-glass design with light and dark mode",
+      body: "## Features\n\n- Projects and course notes\n- Only the owner can add, edit and upload\n- Visitors can leave comments and send private messages\n- Frosted-glass design with light and dark mode",
     },
     {
       id: 'markdown', type: 'note', published: true, createdAt: now - 3 * DAY,

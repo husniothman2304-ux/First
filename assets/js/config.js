@@ -23,12 +23,12 @@ export const FIREBASE_CONFIG = {
 //    time you sign in.
 
 // 3. DEFAULT PROFILE
-//    Shown until you edit your profile on the site (Home → Edit profile).
+//    Shown until you edit your profile on the site (About me → Edit profile).
 export const DEFAULT_PROFILE = {
   motto: "In thrust we trust.",
   name: "Husni Othman",
-  tagline: "Building things, writing notes, taking photos.",
-  bio: "Welcome to my corner of the internet. Here you'll find my **projects**, my **notes**, my **blog** and my **photos**. Leave a comment or send me a private message.",
+  tagline: "Building things and taking notes along the way.",
+  bio: "Welcome to my corner of the internet. Here you'll find my **projects** and my **course** notes. Leave a comment, or say hi on the Contact page.",
   avatarUrl: "",
   avatarPath: "",
 };

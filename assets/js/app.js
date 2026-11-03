@@ -19,13 +19,15 @@ try {
 
 const SECTIONS = [
   { key: 'projects', type: 'project', label: 'Projects', one: 'project', many: 'projects', icon: 'projects', blurb: 'Things I have built and am building.' },
-  { key: 'notes', type: 'note', label: 'Notes', one: 'note', many: 'notes', icon: 'notes', blurb: 'Short notes on what I am learning.' },
-  { key: 'blog', type: 'blog', label: 'Blog', one: 'post', many: 'blog posts', icon: 'blog', blurb: 'Longer thoughts and stories.' },
-  { key: 'photos', type: 'photo', label: 'Photos', one: 'photo', many: 'photos', icon: 'photos', blurb: 'Moments worth keeping.' },
+  // Course entries are stored with type "note", so anything written as a note before shows up here.
+  { key: 'course', type: 'note', label: 'Course', one: 'course note', many: 'course notes', icon: 'course', blurb: 'Notes, info and everything else from my course.' },
 ];
+// Blog and Photos were removed from the site. Old links to them go to About me;
+// anything already posted there stays in the database but isn't shown to visitors.
+const OLD_SECTIONS = { notes: 'course', blog: '', photos: '' };
 const byKey = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
 const byType = Object.fromEntries(SECTIONS.map((s) => [s.type, s]));
-const HOME_LIMIT = { project: 3, note: 4, blog: 3, photo: 6 };
+const HOME_LIMIT = { project: 3, note: 4 };
 
 const state = {
   user: null, owner: false, profile: { ...DEFAULT_PROFILE }, nav: '',
@@ -180,7 +182,7 @@ function renderChrome() {
   $('#brand').innerHTML = `${avatarHTML(p, 'sm')}<span>${esc(p.name)}</span>`;
 
   const links = [
-    { key: '', label: 'Home', icon: 'home' },
+    { key: '', label: 'About me', icon: 'user' },
     ...SECTIONS.map((s) => ({ key: s.key, label: s.label, icon: s.icon })),
     { key: 'contact', label: 'Contact', icon: 'mail' },
   ];
@@ -253,6 +255,10 @@ async function route({ keepScroll = false } = {}) {
     window.scrollTo(0, 0);
     view.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   }
+  if (seg in OLD_SECTIONS) {
+    location.replace(`#/${OLD_SECTIONS[seg]}`);
+    return;
+  }
   try {
     if (!seg) await viewHome(ctx);
     else if (byKey[seg]) await viewSection(ctx, byKey[seg]);
@@ -268,7 +274,7 @@ async function route({ keepScroll = false } = {}) {
 
 // ── Views ───────────────────────────────────────────────────
 async function viewHome(ctx) {
-  const items = await api.listItems(null, { includeDrafts: state.owner });
+  const items = (await api.listItems(null, { includeDrafts: state.owner })).filter((i) => byType[i.type]);
   const p = state.profile;
   const motto = String(p.motto ?? '').trim();
   const nameTag = motto ? 'h2' : 'h1';
@@ -380,7 +386,8 @@ async function viewSection(ctx, s) {
 
 async function viewItem(ctx, id) {
   const item = await api.getItem(id);
-  if (!item || (!item.published && !state.owner)) return viewNotFound(ctx);
+  // Hide drafts, and old blog posts/photos (those sections were removed), from visitors.
+  if (!item || ((!item.published || !byType[item.type]) && !state.owner)) return viewNotFound(ctx);
   const s = byType[item.type] || SECTIONS[0];
   if (!ctx.stale()) setNav(s.key);
   const comments = await api.listComments(id).catch(() => []);
@@ -786,7 +793,7 @@ function openEditor(type, item = null) {
   const has = {
     summary: type === 'project' || type === 'blog',
     link: type === 'project',
-    cover: type !== 'note',
+    cover: true,
     tags: type !== 'photo',
   };
   const it = { title: '', summary: '', link: '', tags: [], body: '', published: true, imageUrl: '', imagePath: '', thumbUrl: '', ...(item || {}) };
