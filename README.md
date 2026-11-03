@@ -1,12 +1,12 @@
 # My personal website
 
-A personal site with an **About me** page, **Projects**, **Course** notes and a private **Contact** chat, with a frosted-glass design in light and dark mode. It is plain HTML, CSS and JavaScript with no build step.
+A personal site with an **About me** page, **Projects**, **Course** notes, a photo **Dump** and a private **Contact** chat, with a frosted-glass design in light and dark mode. It is plain HTML, CSS and JavaScript with no build step.
 
 - **Only you can edit.** You sign in with Google to add, edit, delete and upload. Firebase security rules enforce this on the server, so hiding the buttons is not what keeps others out.
-- **Visitors can comment** on any published project or course note.
+- **Visitors can comment** on any published project, course note or photo.
 - **Visitors can chat with you privately** from the Contact page (text, photos, stickers). You reply from your Inbox.
 - **Drafts.** Turn off "Published" to keep something visible only to you.
-- **Uploads.** Cover images and images inside projects and course notes. Photos are compressed in the browser (up to 1600 px) and stored in the Firestore database, so everything runs on Firebase's free **Spark** plan. No Cloud Storage or payment card is needed.
+- **Uploads.** A photo gallery called **Dump** (upload several photos at once), cover images, and images inside projects and course notes. Photos are compressed in the browser (up to 1600 px) and stored in the Firestore database, so everything runs on Firebase's free **Spark** plan. No Cloud Storage or payment card is needed.
 - **Markdown** for writing, with a live preview.
 
 ## Try it locally (demo mode)
@@ -55,6 +55,7 @@ Paste the values into `FIREBASE_CONFIG` in [`assets/js/config.js`](assets/js/con
 | You want to… | Do this |
 | --- | --- |
 | Add a project or course note | **+** in the top bar, or **New …** on the Projects or Course page |
+| Upload photos | **Dump → Upload photos** (pick several at once) |
 | Put an image inside a post | **Insert image** above the text box in the editor |
 | Edit or delete something | Open it, then **Edit** / **Delete** |
 | Hide something for now | Turn off **Published** in the editor (it becomes a draft) |

@@ -21,13 +21,15 @@ const SECTIONS = [
   { key: 'projects', type: 'project', label: 'Projects', one: 'project', many: 'projects', icon: 'projects', blurb: 'Things I have built and am building.' },
   // Course entries are stored with type "note", so anything written as a note before shows up here.
   { key: 'course', type: 'note', label: 'Course', one: 'course note', many: 'course notes', icon: 'course', blurb: 'Notes, info and everything else from my course.' },
+  // The photo gallery, called "Dump" (as in photo dump). Photos are stored with type "photo".
+  { key: 'dump', type: 'photo', label: 'Dump', one: 'photo', many: 'photos', icon: 'photos', blurb: 'A photo dump: builds, moments and random stuff.' },
 ];
-// Blog and Photos were removed from the site. Old links to them go to About me;
-// anything already posted there stays in the database but isn't shown to visitors.
-const OLD_SECTIONS = { notes: 'course', blog: '', photos: '' };
+// Old page names: Notes became Course, Photos became Dump. The blog was removed:
+// old links go to About me, and posts already there are hidden from visitors.
+const OLD_SECTIONS = { notes: 'course', photos: 'dump', blog: '' };
 const byKey = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
 const byType = Object.fromEntries(SECTIONS.map((s) => [s.type, s]));
-const HOME_LIMIT = { project: 3, note: 4 };
+const HOME_LIMIT = { project: 3, note: 4, photo: 6 };
 
 const state = {
   user: null, owner: false, profile: { ...DEFAULT_PROFILE }, nav: '',
@@ -776,7 +778,7 @@ function openTypePicker() {
   openModal({
     title: 'Add something',
     body: `<div class="picker">${SECTIONS.map((s) => `
-      <button type="button" class="pick glass" data-type="${s.type}">${icon(s.icon, 'xl')}<span>${s.type === 'photo' ? 'Photos' : `New ${s.one}`}</span></button>`).join('')}
+      <button type="button" class="pick glass" data-type="${s.type}">${icon(s.icon, 'xl')}<span>${s.type === 'photo' ? 'Photos to Dump' : `New ${s.one}`}</span></button>`).join('')}
     </div>`,
     onMount(el, close) {
       $$('.pick', el).forEach((b) => b.addEventListener('click', () => {
@@ -985,8 +987,8 @@ function uploadPhotos() {
     t.close();
     if (failed) toast(`${done} uploaded, ${failed} failed`, 'error');
     else toast(`${done} photo${done > 1 ? 's' : ''} uploaded`);
-    if (location.hash === '#/photos') route({ keepScroll: true });
-    else location.hash = '#/photos';
+    if (location.hash === '#/dump') route({ keepScroll: true });
+    else location.hash = '#/dump';
   });
   input.click();
 }

@@ -28,7 +28,7 @@ export const DEFAULT_PROFILE = {
   motto: "In thrust we trust.",
   name: "Husni Othman",
   tagline: "Building things and taking notes along the way.",
-  bio: "Welcome to my corner of the internet. Here you'll find my **projects** and my **course** notes. Leave a comment, or say hi on the Contact page.",
+  bio: "Welcome to my corner of the internet. Here you'll find my **projects**, my **course** notes and a photo **dump**. Leave a comment, or say hi on the Contact page.",
   avatarUrl: "",
   avatarPath: "",
 };
