@@ -62,6 +62,24 @@ function avatarHTML(p, size) {
     : `<span class="avatar ${size} initials" aria-hidden="true">${esc(initials(p.name))}</span>`;
 }
 
+// Profile banner (wide photo behind the profile). Without a photo it shows a
+// poster-style placeholder. `raw` is for a local preview (blob: URL) in the editor.
+const BANNER_POS = { top: 'top', center: 'center', bottom: 'bottom' };
+function bannerHTML(p, { editing = false, raw = false } = {}) {
+  const pos = BANNER_POS[p.bannerPos] || 'center';
+  const url = p.bannerUrl || '';
+  if (raw && url) {
+    return `<div class="pbanner" style="--banner-pos:${pos}"><img src="${esc(url)}" alt=""></div>`;
+  }
+  if (hasImg(url)) {
+    // Show the small preview instantly, then the full photo on top once it loads.
+    const thumb = safeUrl(p.bannerThumb);
+    return `<div class="pbanner" style="--banner-pos:${pos}${thumb ? `;background-image:url('${esc(thumb)}')` : ''}">
+      <img ${imgSrc(url)} alt="" onload="this.classList.add('ready')"></div>`;
+  }
+  return `<div class="pbanner placeholder-banner">${editing ? '' : '<span class="banner-mark" aria-hidden="true"></span>'}</div>`;
+}
+
 const draftBadge = (i) => (i.published ? '' : '<span class="pill draft">Draft</span>');
 
 const tagsHTML = (tags) =>
@@ -293,11 +311,19 @@ async function viewHome(ctx) {
         <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
           .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
         <div class="burn" aria-hidden="true"></div>` : '<div style="height:18px"></div>'}
-      <div class="hero-body hero-fade">
-        ${avatarHTML(p, 'lg')}
+      <div class="profile hero-fade">
+        <div class="banner-wrap">
+          ${bannerHTML(p)}
+          ${state.owner ? `<button class="btn sm banner-edit" data-act="profile">${icon('photos')} ${hasImg(p.bannerUrl) ? 'Change banner' : 'Add banner'}</button>` : ''}
+        </div>
+        <div class="profile-id">
+          ${avatarHTML(p, 'lg')}
+          <div class="profile-names">
+            <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
+            ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
+          </div>
+        </div>
         <div class="hero-text">
-          <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
-          ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
           ${p.bio ? `<div class="prose">${md(p.bio)}</div>` : ''}
           <div class="row">
             <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
@@ -1001,6 +1027,20 @@ function openProfileEditor() {
     locked: true,
     body: `
       <form class="stack">
+        <div class="banner-field">
+          <label class="banner-pick" title="Change banner">
+            ${bannerHTML(p, { editing: true })}
+            <input type="file" name="banner" accept="image/*" hidden>
+            <span class="banner-hint">${icon('photos')} ${hasImg(p.bannerUrl) ? 'Change banner' : 'Add a banner'}</span>
+          </label>
+          <div class="row between">
+            <label class="inline-select">Show
+              <select name="bannerPos">
+                ${['top', 'center', 'bottom'].map((v) => `<option value="${v}" ${(p.bannerPos || 'center') === v ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`).join('')}
+              </select> of the photo</label>
+            <button type="button" class="btn sm" data-x="remove-banner" ${hasImg(p.bannerUrl) ? '' : 'hidden'}>Remove banner</button>
+          </div>
+        </div>
         <div class="avatar-field">
           <label class="avatar-pick" title="Change photo">
             ${avatarHTML(p, 'lg')}
@@ -1027,6 +1067,31 @@ function openProfileEditor() {
         const pick = $('.avatar-pick', el);
         pick.querySelector('.avatar').outerHTML = `<img class="avatar lg" src="${URL.createObjectURL(file)}" alt="">`;
       });
+
+      // Banner: pick, preview, reposition, remove
+      let bannerFile = null;
+      let removeBanner = false;
+      const bannerBox = () => $('.banner-pick .pbanner', el);
+      const removeBtn = $('[data-x=remove-banner]', el);
+      const setPos = () => bannerBox().style.setProperty('--banner-pos', form.bannerPos.value);
+      form.banner.addEventListener('change', () => {
+        bannerFile = form.banner.files[0] || null;
+        if (!bannerFile) return;
+        removeBanner = false;
+        bannerBox().outerHTML = bannerHTML({ bannerUrl: URL.createObjectURL(bannerFile), bannerPos: form.bannerPos.value }, { editing: true, raw: true });
+        $('.banner-hint', el).lastChild.textContent = ' Change banner';
+        removeBtn.hidden = false;
+      });
+      form.bannerPos.addEventListener('change', setPos);
+      removeBtn.addEventListener('click', () => {
+        bannerFile = null;
+        removeBanner = true;
+        form.banner.value = '';
+        bannerBox().outerHTML = bannerHTML({}, { editing: true });
+        $('.banner-hint', el).lastChild.textContent = ' Add a banner';
+        removeBtn.hidden = true;
+      });
+
       $('[data-x=cancel]', el).addEventListener('click', close);
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1034,14 +1099,26 @@ function openProfileEditor() {
         if (!name) return toast('Please add your name.', 'error');
         await withBusy($('[type=submit]', form), 'Saving…', async () => {
           try {
-            const data = { motto: form.motto.value.trim(), name, tagline: form.tagline.value.trim(), bio: form.bio.value };
+            const data = {
+              motto: form.motto.value.trim(), name, tagline: form.tagline.value.trim(), bio: form.bio.value,
+              bannerPos: form.bannerPos.value,
+            };
             if (file) {
               const up = await api.uploadImage(await resizeImage(file, 600));
               data.avatarUrl = up.thumbUrl || up.url; // the small version is plenty for an avatar
               data.avatarPath = up.path;
             }
+            if (bannerFile) {
+              const up = await api.uploadImage(await resizeImage(bannerFile, 2400));
+              data.bannerUrl = up.url;
+              data.bannerThumb = up.thumbUrl || '';
+              data.bannerPath = up.path;
+            } else if (removeBanner) {
+              Object.assign(data, { bannerUrl: '', bannerThumb: '', bannerPath: '' });
+            }
             await api.saveProfile(data);
             if (file && p.avatarPath) api.deleteUpload(p.avatarPath).catch(() => {});
+            if ((bannerFile || removeBanner) && p.bannerPath) api.deleteUpload(p.bannerPath).catch(() => {});
             state.profile = { ...state.profile, ...data };
             close();
             renderChrome();
