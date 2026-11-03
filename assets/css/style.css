@@ -172,9 +172,11 @@ main { flex: 1; display: grid; gap: 28px; align-content: start; margin-top: 24px
 
 .footer {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  gap: 6px;
   padding-block: 24px 32px;
   color: var(--muted);
   font-size: 13px;
@@ -497,7 +499,8 @@ input:focus, textarea:focus, select:focus {
 }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
 textarea { resize: vertical; min-height: 90px; line-height: 1.55; }
-label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 4px; font-size: 14px; font-weight: 600; }
+label > input, label > textarea, label > select { flex-basis: 100%; }
 label .muted { font-weight: 450; }
 .hp { position: absolute !important; left: -10000px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
