@@ -99,9 +99,26 @@ function build() {
   svg.appendChild(trail);
   all.push(tp);
 
+  // A bright streak that travels along the contrail every few seconds.
+  const comet = el('g', { class: 'comet' });
+  const cp = el('path', { d: curve(layout.trail) });
+  comet.appendChild(cp);
+  svg.appendChild(comet);
+
   for (const p of all) p.style.setProperty('--len', Math.ceil(p.getTotalLength() + 2));
-  // Two frames later, start the draw-in transition.
-  requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.add('drawn')));
+  cp.style.setProperty('--len', Math.ceil(cp.getTotalLength()));
+  cp.style.setProperty('--seg', 120);
+
+  // Start the draw-in once the logo intro (if any) has finished.
+  afterIntro(() => requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.add('drawn'))));
+}
+
+function afterIntro(fn) {
+  if (document.documentElement.classList.contains('intro-playing')) {
+    document.addEventListener('introdone', fn, { once: true });
+  } else {
+    fn();
+  }
 }
 
 // ── Parallax ────────────────────────────────────────────────

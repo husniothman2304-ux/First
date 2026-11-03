@@ -87,8 +87,21 @@ const revealer = !reduceMotion && 'IntersectionObserver' in window
   }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' })
   : null;
 
+// Runs fn now, or once the logo intro has finished playing.
+function afterIntro(fn) {
+  if (document.documentElement.classList.contains('intro-playing')) {
+    document.addEventListener('introdone', fn, { once: true });
+  } else {
+    fn();
+  }
+}
+
 function revealOnScroll(root) {
   if (!revealer) return;
+  if (document.documentElement.classList.contains('intro-playing')) {
+    afterIntro(() => { if (root.isConnected) revealOnScroll(root); });
+    return;
+  }
   $$('.block, #list .card, #list .note, #list .photo, .page-head, .article, .comments, .contact, .msg', root)
     .forEach((el, i) => {
       el.classList.add('reveal');
@@ -308,6 +321,10 @@ function countUp(root) {
     el.textContent = dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US');
   };
   if (reduceMotion) { els.forEach((el) => fmt(el, Number(el.dataset.count))); return; }
+  if (document.documentElement.classList.contains('intro-playing')) {
+    afterIntro(() => countUp(root));
+    return;
+  }
   const start = performance.now() + 250;
   const dur = 1800;
   const step = (now) => {

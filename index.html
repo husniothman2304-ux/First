@@ -9,6 +9,14 @@
   <meta name="theme-color" content="#0f0e0c" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23141210'/%3E%3Cpath d='M10 44 C24 40 34 30 54 14' stroke='%23efe9df' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M10 52 C26 48 38 38 54 24' stroke='%23d63b1f' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 
+  <!-- Play the logo intro once per visit (decided before the page paints) -->
+  <script>
+    (function () {
+      var seen = false;
+      try { seen = sessionStorage.getItem('intro-seen') === '1'; } catch (e) {}
+      document.documentElement.classList.add(seen ? 'no-intro' : 'intro-playing');
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap">
@@ -17,10 +25,28 @@
   <!-- Markdown rendering + HTML sanitising for posts and notes -->
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script defer src="assets/js/intro.js"></script>
   <script type="module" src="assets/js/bg.js"></script>
   <script type="module" src="assets/js/app.js"></script>
 </head>
 <body>
+  <!-- Logo intro. To use your own logo, replace the <span class="mono-mark"> with
+       <img src="assets/img/logo.svg" alt=""> (SVG or transparent PNG). -->
+  <div class="intro" id="intro" aria-hidden="true">
+    <span class="hair h"></span><span class="hair v"></span>
+    <div class="intro-center">
+      <svg class="intro-ring" viewBox="0 0 200 200">
+        <circle class="track" cx="100" cy="100" r="96"/>
+        <circle class="sweep" cx="100" cy="100" r="96"/>
+      </svg>
+      <div class="intro-logo"><span class="mono-mark">HO</span></div>
+    </div>
+    <span class="intro-boom"></span><span class="intro-boom b2"></span>
+    <div class="intro-caption"><span class="live"></span><span>Husni Othman</span></div>
+    <div class="intro-bar"><span></span></div>
+    <div class="intro-skip">Tap to skip</div>
+  </div>
+
   <div class="bg" aria-hidden="true">
     <div class="paper"></div>
     <svg class="ribbons" id="ribbons" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"></svg>
