@@ -25,6 +25,7 @@ export const FIREBASE_CONFIG = {
 // 3. DEFAULT PROFILE
 //    Shown until you edit your profile on the site (Home → Edit profile).
 export const DEFAULT_PROFILE = {
+  motto: "In thrust we trust.",
   name: "Husni Othman",
   tagline: "Building things, writing notes, taking photos.",
   bio: "Welcome to my corner of the internet. Here you'll find my **projects**, my **notes**, my **blog** and my **photos**. Leave a comment or send me a private message.",

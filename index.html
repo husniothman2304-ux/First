@@ -5,23 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>My website</title>
   <meta name="description" content="Projects, notes, blog posts and photos.">
-  <meta name="theme-color" content="#eef0f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#07070b" media="(prefers-color-scheme: dark)">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235ac8fa'/%3E%3Cstop offset='1' stop-color='%23af52de'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='32' r='12' fill='white' fill-opacity='.85'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#ebe5d8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f0e0c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23141210'/%3E%3Cpath d='M10 44 C24 40 34 30 54 14' stroke='%23efe9df' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M10 52 C26 48 38 38 54 24' stroke='%23d63b1f' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/style.css">
 
   <!-- Markdown rendering + HTML sanitising for posts and notes -->
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script type="module" src="assets/js/bg.js"></script>
   <script type="module" src="assets/js/app.js"></script>
 </head>
 <body>
   <div class="bg" aria-hidden="true">
-    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span>
+    <div class="paper"></div>
+    <svg class="ribbons" id="ribbons" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"></svg>
+    <div class="grain"></div>
   </div>
 
   <header class="topbar glass">

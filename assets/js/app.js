@@ -68,7 +68,33 @@ function render(ctx, html) {
   if (ctx.stale()) return false;
   ctx.view.innerHTML = html;
   $$('.prose a[href^="http"]', ctx.view).forEach((a) => { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
+  revealOnScroll(ctx.view);
   return true;
+}
+
+// ── Scroll-in animation ─────────────────────────────────────
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const revealer = !reduceMotion && 'IntersectionObserver' in window
+  ? new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (!en.isIntersecting) return;
+      const el = en.target;
+      revealer.unobserve(el);
+      el.classList.add('in');
+      // Hand the element back to its normal hover effects once it has landed.
+      setTimeout(() => el.classList.remove('reveal', 'in'), 1100 + (parseInt(el.style.getPropertyValue('--rd'), 10) || 0));
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' })
+  : null;
+
+function revealOnScroll(root) {
+  if (!revealer) return;
+  $$('.block, #list .card, #list .note, #list .photo, .page-head, .article, .comments, .contact, .msg', root)
+    .forEach((el, i) => {
+      el.classList.add('reveal');
+      el.style.setProperty('--rd', `${(i % 6) * 70}ms`);
+      revealer.observe(el);
+    });
 }
 
 // ── Cards ───────────────────────────────────────────────────
@@ -216,17 +242,31 @@ async function route({ keepScroll = false } = {}) {
 async function viewHome(ctx) {
   const items = await api.listItems(null, { includeDrafts: state.owner });
   const p = state.profile;
+  const motto = String(p.motto ?? '').trim();
+  const nameTag = motto ? 'h2' : 'h1';
   const hero = `
     <section class="hero glass">
-      ${avatarHTML(p, 'lg')}
-      <div class="hero-text">
-        <h1>${esc(p.name)}</h1>
-        ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
-        ${p.bio ? `<div class="prose">${md(p.bio)}</div>` : ''}
-        <div class="row">
-          <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
-          <a class="btn" href="#/projects">See my projects</a>
-          ${state.owner ? `<button class="btn" data-act="profile">${icon('edit')} Edit profile</button>` : ''}
+      <div class="readout" aria-hidden="true">
+        <span class="live"></span><span>Airborne</span><span class="sep">/</span>
+        <span>Alt <b data-count="85000">0</b> ft</span><span class="sep">/</span>
+        <span>Mach <b data-count="3.3" data-dec="1">0.0</b></span><span class="sep">/</span>
+        <span>Log <b data-count="${items.length}">0</b> entries</span>
+      </div>
+      ${motto ? `
+        <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
+          .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
+        <div class="burn" aria-hidden="true"></div>` : '<div style="height:18px"></div>'}
+      <div class="hero-body hero-fade">
+        ${avatarHTML(p, 'lg')}
+        <div class="hero-text">
+          <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
+          ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
+          ${p.bio ? `<div class="prose">${md(p.bio)}</div>` : ''}
+          <div class="row">
+            <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
+            <a class="btn" href="#/projects">See my projects</a>
+            ${state.owner ? `<button class="btn" data-act="profile">${icon('edit')} Edit profile</button>` : ''}
+          </div>
         </div>
       </div>
     </section>`;
@@ -244,7 +284,39 @@ async function viewHome(ctx) {
       </section>`;
   }).join('');
 
-  render(ctx, hero + blocks);
+  if (render(ctx, hero + blocks)) countUp(ctx.view);
+}
+
+// Splits the motto into two lines of similar length for the poster headline.
+function splitMotto(text) {
+  const words = text.split(/\s+/);
+  if (words.length < 2) return [text];
+  let best = 1;
+  let bestDiff = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const diff = Math.abs(words.slice(0, i).join(' ').length - words.slice(i).join(' ').length);
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  }
+  return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+}
+
+// Animates the flight readout numbers from 0 up to their value.
+function countUp(root) {
+  const els = $$('[data-count]', root);
+  const fmt = (el, v) => {
+    const dec = Number(el.dataset.dec || 0);
+    el.textContent = dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US');
+  };
+  if (reduceMotion) { els.forEach((el) => fmt(el, Number(el.dataset.count))); return; }
+  const start = performance.now() + 250;
+  const dur = 1800;
+  const step = (now) => {
+    const t = Math.min(1, Math.max(0, (now - start) / dur));
+    const e = 1 - Math.pow(1 - t, 3);
+    els.forEach((el) => fmt(el, Number(el.dataset.count) * e));
+    if (t < 1 && els[0] && els[0].isConnected) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 async function viewSection(ctx, s) {
@@ -310,7 +382,7 @@ function commentsHTML(itemId, list) {
   const items = list.length ? list.map((c) => `
     <li class="comment ${c.owner ? 'by-owner' : ''}">
       <div class="c-head">
-        <span class="avatar xs initials" style="--h:${hue(c.name)}" aria-hidden="true">${esc(initials(c.name))}</span>
+        <span class="avatar xs initials hued" style="--h:${hue(c.name)}" aria-hidden="true">${esc(initials(c.name))}</span>
         <strong>${esc(c.name)}</strong>
         ${c.owner ? '<span class="pill">Author</span>' : ''}
         <time class="meta">${fmtDate(c.createdAt, true)}</time>
@@ -691,6 +763,8 @@ function openProfileEditor() {
             <span class="avatar-hint">Change photo</span>
           </label>
         </div>
+        <label>Big headline <span class="muted">(top of the home page, leave empty to hide)</span>
+          <input name="motto" maxlength="60" value="${esc(p.motto || '')}"></label>
         <label>Name<input name="name" maxlength="80" required value="${esc(p.name)}"></label>
         <label>Tagline<input name="tagline" maxlength="160" value="${esc(p.tagline)}"></label>
         <label>About you <span class="muted">(Markdown)</span><textarea name="bio" rows="6">${esc(p.bio)}</textarea></label>
@@ -715,7 +789,7 @@ function openProfileEditor() {
         if (!name) return toast('Please add your name.', 'error');
         await withBusy($('[type=submit]', form), 'Saving…', async () => {
           try {
-            const data = { name, tagline: form.tagline.value.trim(), bio: form.bio.value };
+            const data = { motto: form.motto.value.trim(), name, tagline: form.tagline.value.trim(), bio: form.bio.value };
             if (file) {
               const up = await api.uploadImage(await resizeImage(file, 600));
               data.avatarUrl = up.thumbUrl || up.url; // the small version is plenty for an avatar
