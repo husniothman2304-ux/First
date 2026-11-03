@@ -755,11 +755,19 @@ document.addEventListener('click', async (e) => {
   const { act, id } = el.dataset;
   try {
     switch (act) {
-      case 'signin':
-        try { await api.signIn(); } catch (err) {
-          if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') throw err;
+      case 'signin': {
+        const t = toast('Opening Google sign-in…', 'info', 0);
+        try {
+          await api.signIn();
+          t.close();
+        } catch (err) {
+          t.close();
+          if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+            toast('Sign-in was closed before it finished.', 'info');
+          } else throw err;
         }
         break;
+      }
       case 'signout':
         await api.signOut();
         toast('Signed out');

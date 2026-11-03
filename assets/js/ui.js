@@ -75,7 +75,9 @@ export function friendlyError(e) {
   const code = (e && e.code) || '';
   if (code === 'permission-denied' || code === 'storage/unauthorized') return "You don't have permission to do that.";
   if (code === 'auth/popup-blocked') return 'Your browser blocked the sign-in popup. Allow popups for this site and try again.';
-  if (code === 'auth/unauthorized-domain') return "This domain isn't allowed to sign in yet. Add it in Firebase → Authentication → Settings → Authorized domains.";
+  if (code === 'auth/unauthorized-domain') return `Sign-in isn't allowed on ${location.hostname} yet. Add it in Firebase → Authentication → Settings → Authorized domains.`;
+  if (code === 'auth/operation-not-allowed') return 'Google sign-in is turned off. Turn it on in Firebase → Authentication → Sign-in method.';
+  if (code === 'auth/network-request-failed') return "Couldn't reach Google. Check your connection, or turn off Brave Shields for this site, and try again.";
   if (code === 'unavailable') return "Can't reach the server. Check your connection and try again.";
   return (e && e.message) || 'Something went wrong.';
 }
@@ -103,7 +105,7 @@ export const icon = (name, cls = '') =>
   `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name] || ''}</svg>`;
 
 // ── Toasts ──────────────────────────────────────────────────
-export function toast(msg, kind = 'ok', ms = 3200) {
+export function toast(msg, kind = 'ok', ms = kind === 'error' ? 9000 : 3200) {
   const host = document.getElementById('toasts');
   const el = document.createElement('div');
   el.className = `toast glass-strong ${kind}`;
