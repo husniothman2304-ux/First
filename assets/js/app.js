@@ -23,13 +23,14 @@ const SECTIONS = [
   { key: 'course', type: 'note', label: 'Course', one: 'course note', many: 'course notes', icon: 'course', blurb: 'Notes, info and everything else from my course.' },
   // The photo gallery, called "Dump" (as in photo dump). Photos are stored with type "photo".
   { key: 'dump', type: 'photo', label: 'Dump', one: 'photo', many: 'photos', icon: 'photos', blurb: 'A photo dump: builds, moments and random stuff.' },
+  // Lifestyle posts (stored with type "blog", so older blog posts appear here too).
+  { key: 'lifestyle', type: 'blog', label: 'Lifestyle', one: 'lifestyle post', many: 'lifestyle posts', icon: 'lifestyle', blurb: 'Life outside the workshop: habits, places, food and everything in between.' },
 ];
-// Old page names: Notes became Course, Photos became Dump. The blog was removed:
-// old links go to About me, and posts already there are hidden from visitors.
-const OLD_SECTIONS = { notes: 'course', photos: 'dump', blog: '' };
+// Old page names: Notes became Course, Photos became Dump, Blog became Lifestyle.
+const OLD_SECTIONS = { notes: 'course', photos: 'dump', blog: 'lifestyle' };
 const byKey = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
 const byType = Object.fromEntries(SECTIONS.map((s) => [s.type, s]));
-const HOME_LIMIT = { project: 3, note: 4, photo: 6 };
+const HOME_LIMIT = { project: 3, note: 4, photo: 6, blog: 3 };
 
 const state = {
   user: null, owner: false, profile: { ...DEFAULT_PROFILE }, nav: '',
