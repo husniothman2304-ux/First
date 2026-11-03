@@ -7,8 +7,7 @@
 //    (Firebase console → Project settings → General → Your apps → Web app).
 //    While apiKey is empty the site runs in DEMO MODE: everything is saved only
 //    in your own browser, so you can try it out before going live.
-//    These values are not secrets. What protects your data is
-//    firestore.rules and storage.rules.
+//    These values are not secrets. What protects your data is firestore.rules.
 export const FIREBASE_CONFIG = {
   apiKey: "",
   authDomain: "",
@@ -19,9 +18,9 @@ export const FIREBASE_CONFIG = {
 };
 
 // 2. OWNER
-//    Who counts as the owner is decided only by firestore.rules and
-//    storage.rules (replace REPLACE_WITH_YOUR_UID in both files). The site
-//    shows you your user ID the first time you sign in.
+//    Who counts as the owner is decided only by firestore.rules (replace
+//    REPLACE_WITH_YOUR_UID there). The site shows you your user ID the first
+//    time you sign in.
 
 // 3. DEFAULT PROFILE
 //    Shown until you edit your profile on the site (Home → Edit profile).

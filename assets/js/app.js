@@ -1,7 +1,7 @@
 import { loadBackend } from './backend.js';
 import { DEFAULT_PROFILE } from './config.js';
 import {
-  $, $$, esc, md, plain, safeUrl, fmtDate, debounce, store, friendlyError,
+  $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
   icon, toast, openModal, confirmDialog, resizeImage,
 } from './ui.js';
 
@@ -47,9 +47,8 @@ function excerpt(text, n = 160) {
 const itemHref = (i) => `#/p/${encodeURIComponent(i.id)}`;
 
 function avatarHTML(p, size) {
-  const url = safeUrl(p.avatarUrl);
-  return url
-    ? `<img class="avatar ${size}" src="${esc(url)}" alt="">`
+  return hasImg(p.avatarUrl)
+    ? `<img class="avatar ${size}" ${imgSrc(p.avatarUrl)} alt="">`
     : `<span class="avatar ${size} initials" aria-hidden="true">${esc(initials(p.name))}</span>`;
 }
 
@@ -59,8 +58,8 @@ const tagsHTML = (tags) =>
   tags && tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : '';
 
 function coverHTML(i) {
-  const url = safeUrl(i.imageUrl);
-  if (url) return `<div class="cover"><img src="${esc(url)}" alt="" loading="lazy"></div>`;
+  const thumb = i.thumbUrl || i.imageUrl;
+  if (hasImg(thumb)) return `<div class="cover"><img ${imgSrc(thumb)} alt="" loading="lazy"></div>`;
   const letter = (i.title || '?').trim().charAt(0).toUpperCase();
   return `<div class="cover placeholder" style="--h:${hue(i.id)}"><span>${esc(letter)}</span></div>`;
 }
@@ -85,7 +84,7 @@ const projectCard = (i) => `
 
 const blogCard = (i) => `
   <a class="card glass" href="${itemHref(i)}">
-    ${safeUrl(i.imageUrl) ? coverHTML(i) : ''}
+    ${hasImg(i.imageUrl) ? coverHTML(i) : ''}
     <div class="card-body">
       <time class="meta">${fmtDate(i.createdAt)}</time>
       <h3>${esc(i.title)} ${draftBadge(i)}</h3>
@@ -105,7 +104,7 @@ const noteRow = (i) => `
 
 const photoTile = (i) => `
   <a class="photo" href="${itemHref(i)}">
-    <img src="${esc(safeUrl(i.imageUrl))}" alt="${esc(i.title || 'Photo')}" loading="lazy">
+    <img ${imgSrc(i.thumbUrl || i.imageUrl)} alt="${esc(i.title || 'Photo')}" loading="lazy">
     ${i.title ? `<span class="caption">${esc(i.title)}</span>` : ''}
     ${i.published ? '' : '<span class="pill draft corner">Draft</span>'}
   </a>`;
@@ -173,7 +172,7 @@ function renderBanner() {
     html = `<div class="banner glass warn">Signed in as <strong>${esc(state.user.email || state.user.name)}</strong>, which isn't the owner account.
       If this is you, put your user ID <code>${esc(state.user.uid)}</code>
       <button class="btn sm" data-act="copy" data-text="${esc(state.user.uid)}">Copy</button>
-      into <code>firestore.rules</code> and <code>storage.rules</code>, then publish the rules.</div>`;
+      into <code>firestore.rules</code>, then publish the rules.</div>`;
   }
   $('#banner').innerHTML = html;
 }
@@ -282,7 +281,7 @@ async function viewItem(ctx, id) {
   if (!ctx.stale()) setNav(s.key);
   const comments = await api.listComments(id).catch(() => []);
   const link = safeUrl(item.link);
-  const img = safeUrl(item.imageUrl);
+  const img = hasImg(item.imageUrl) ? imgSrc(item.imageUrl) : '';
   const isPhoto = item.type === 'photo';
 
   render(ctx, `
@@ -295,8 +294,8 @@ async function viewItem(ctx, id) {
         </div>` : ''}
       </div>
       ${img ? (isPhoto
-        ? `<figure class="photo-full"><img src="${esc(img)}" alt="${esc(item.title || 'Photo')}"></figure>`
-        : `<div class="article-cover"><img src="${esc(img)}" alt=""></div>`) : ''}
+        ? `<figure class="photo-full"><img ${img} alt="${esc(item.title || 'Photo')}"></figure>`
+        : `<div class="article-cover"><img ${img} alt=""></div>`) : ''}
       <div class="meta"><time>${fmtDate(item.createdAt)}</time> ${draftBadge(item)}</div>
       ${item.title ? `<h1>${esc(item.title)}</h1>` : ''}
       ${item.summary ? `<p class="lead">${esc(item.summary)}</p>` : ''}
@@ -483,9 +482,9 @@ function openEditor(type, item = null) {
     cover: type !== 'note',
     tags: type !== 'photo',
   };
-  const it = { title: '', summary: '', link: '', tags: [], body: '', published: true, imageUrl: '', imagePath: '', ...(item || {}) };
-  const coverPreview = (url) => (url
-    ? `<img src="${esc(url)}" alt="">`
+  const it = { title: '', summary: '', link: '', tags: [], body: '', published: true, imageUrl: '', imagePath: '', thumbUrl: '', ...(item || {}) };
+  const coverPreview = (url) => (hasImg(url)
+    ? `<img ${imgSrc(url)} alt="">`
     : `${icon('photos', 'xl')}<span>${type === 'photo' ? 'Choose a photo' : 'Add a cover image (optional)'}</span>`);
 
   openModal({
@@ -497,7 +496,7 @@ function openEditor(type, item = null) {
         ${has.cover ? `
           <div class="cover-field">
             <label class="cover-preview ${it.imageUrl ? '' : 'empty'}">
-              ${coverPreview(safeUrl(it.imageUrl))}
+              ${coverPreview(it.thumbUrl || it.imageUrl)}
               <input type="file" name="cover" accept="image/*" hidden>
             </label>
             <button type="button" class="btn sm" data-x="remove-cover" ${it.imageUrl ? '' : 'hidden'}>Remove image</button>
@@ -608,10 +607,12 @@ function openEditor(type, item = null) {
           try {
             let imageUrl = removeCover ? '' : it.imageUrl;
             let imagePath = removeCover ? '' : it.imagePath;
+            let thumbUrl = removeCover ? '' : (it.thumbUrl || '');
             if (coverFile) {
               const up = await api.uploadImage(await resizeImage(coverFile, type === 'photo' ? 2400 : 1800));
               imageUrl = up.url;
               imagePath = up.path;
+              thumbUrl = up.thumbUrl || '';
             }
             const data = {
               type,
@@ -623,6 +624,7 @@ function openEditor(type, item = null) {
               published: form.published.checked,
               imageUrl,
               imagePath,
+              thumbUrl,
             };
             const id = await api.saveItem(item ? item.id : null, data);
             if (it.imagePath && it.imagePath !== imagePath) api.deleteUpload(it.imagePath).catch(() => {});
@@ -657,7 +659,7 @@ function uploadPhotos() {
         const up = await api.uploadImage(await resizeImage(f, 2400));
         await api.saveItem(null, {
           type: 'photo', title: '', summary: '', link: '', tags: [], body: '',
-          published: true, imageUrl: up.url, imagePath: up.path,
+          published: true, imageUrl: up.url, imagePath: up.path, thumbUrl: up.thumbUrl || '',
         });
         done++;
       } catch (e) {
@@ -716,7 +718,7 @@ function openProfileEditor() {
             const data = { name, tagline: form.tagline.value.trim(), bio: form.bio.value };
             if (file) {
               const up = await api.uploadImage(await resizeImage(file, 600));
-              data.avatarUrl = up.url;
+              data.avatarUrl = up.thumbUrl || up.url; // the small version is plenty for an avatar
               data.avatarPath = up.path;
             }
             await api.saveProfile(data);
@@ -816,6 +818,22 @@ document.addEventListener('submit', (e) => {
   e.preventDefault();
   handler(form).catch((err) => { console.error(err); toast(friendlyError(err), 'error'); });
 });
+
+// ── Images stored in the database ───────────────────────────
+// Anything rendered with data-fsimg="<id>" gets its picture fetched once.
+const imageCache = new Map();
+function resolveImages() {
+  $$('img[data-fsimg]').forEach((img) => {
+    const id = fsImageId(`#fsimg-${img.dataset.fsimg}`);
+    img.removeAttribute('data-fsimg');
+    if (!id) return;
+    if (!imageCache.has(id)) imageCache.set(id, api.getImage(id));
+    imageCache.get(id)
+      .then((src) => { if (safeUrl(src)) img.src = src; })
+      .catch((e) => { console.warn('Image failed to load', id, e); imageCache.delete(id); });
+  });
+}
+new MutationObserver(resolveImages).observe(document.body, { childList: true, subtree: true });
 
 // ── Boot ────────────────────────────────────────────────────
 try {

@@ -1,5 +1,7 @@
-// Live backend: Firebase Auth (Google sign-in), Firestore and Cloud Storage.
-// Access control is enforced by firestore.rules and storage.rules, not here.
+// Live backend: Firebase Auth (Google sign-in) and Firestore.
+// Images are compressed and stored as Firestore documents, which keeps the
+// project on the free Spark plan (no Cloud Storage needed).
+// Access control is enforced by firestore.rules, not here.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged,
@@ -8,15 +10,12 @@ import {
   getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, setDoc, deleteDoc,
   query, where, limit, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import {
-  getStorage, ref, uploadBytes, getDownloadURL, deleteObject,
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 import { FIREBASE_CONFIG } from './config.js';
+import { fitDataUrl } from './ui.js';
 
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 export const mode = 'live';
 
@@ -110,7 +109,11 @@ export async function deleteItem(id) {
   const comments = await getDocs(collection(db, 'items', id, 'comments'));
   await Promise.all(comments.docs.map((d) => deleteDoc(d.ref)));
   await deleteDoc(doc(db, 'items', id));
-  if (item && item.imagePath) await deleteUpload(item.imagePath).catch(() => {});
+  if (!item) return;
+  // Also remove the cover image and any images placed inside the text.
+  const paths = new Set(item.imagePath ? [item.imagePath] : []);
+  for (const m of String(item.body || '').matchAll(/#fsimg-([A-Za-z0-9]{1,40})/g)) paths.add(`images/${m[1]}`);
+  await Promise.all([...paths].map((p) => deleteUpload(p).catch(() => {})));
 }
 
 // ── Comments (public) ───────────────────────────────────────
@@ -149,17 +152,26 @@ export async function deleteMessage(id) {
   await deleteDoc(doc(db, 'messages', id));
 }
 
-// ── Uploads ─────────────────────────────────────────────────
-const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
+// ── Images (stored in Firestore) ────────────────────────────
+// A Firestore document can hold at most 1 MiB, so the full image is squeezed
+// under ~900 KB. A small thumbnail is returned too, which the page keeps
+// inside the item itself so galleries and cards load without extra reads.
+const FULL_STEPS = [[1600, 0.82], [1400, 0.76], [1200, 0.72], [1000, 0.68], [800, 0.62]];
+const THUMB_STEPS = [[560, 0.72], [440, 0.66], [340, 0.6]];
 
 export async function uploadImage(blob) {
-  const type = blob.type || 'image/jpeg';
-  const path = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${EXT[type] || 'img'}`;
-  const r = ref(storage, path);
-  await uploadBytes(r, blob, { contentType: type, cacheControl: 'public,max-age=31536000' });
-  return { url: await getDownloadURL(r), path };
+  const full = await fitDataUrl(blob, FULL_STEPS, 900_000);
+  const thumbUrl = await fitDataUrl(blob, THUMB_STEPS, 70_000);
+  const r = await addDoc(collection(db, 'images'), { data: full, createdAt: serverTimestamp() });
+  return { url: `#fsimg-${r.id}`, path: `images/${r.id}`, thumbUrl };
+}
+
+export async function getImage(id) {
+  const s = await getDoc(doc(db, 'images', id));
+  return s.exists() ? s.data().data : '';
 }
 
 export async function deleteUpload(path) {
-  if (path && path.startsWith('uploads/')) await deleteObject(ref(storage, path));
+  const m = /^images\/([A-Za-z0-9]{1,40})$/.exec(path || '');
+  if (m) await deleteDoc(doc(db, 'images', m[1]));
 }

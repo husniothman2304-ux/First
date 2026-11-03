@@ -1,6 +1,6 @@
 // Demo backend: keeps everything in this browser's localStorage so the site
 // can be tried before Firebase is set up. Nothing here is shared or private.
-import { resizeImage } from './ui.js';
+import { resizeImage, blobToDataUrl } from './ui.js';
 
 export const mode = 'demo';
 
@@ -160,14 +160,10 @@ export async function deleteMessage(id) {
 
 // ── Uploads (stored as small data URLs) ─────────────────────
 export async function uploadImage(blob) {
-  const small = await resizeImage(blob, 1100, 0.8, 150e3);
-  const url = await new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(new Error('Could not read the image.'));
-    r.readAsDataURL(small);
-  });
-  return { url, path: 'demo/' + newId() };
+  const url = await blobToDataUrl(await resizeImage(blob, 1100, 0.8, 150e3));
+  return { url, path: 'demo/' + newId(), thumbUrl: '' };
 }
+
+export async function getImage() { return ''; }
 
 export async function deleteUpload() { /* data URLs live inside the items */ }

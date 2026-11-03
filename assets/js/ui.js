@@ -6,11 +6,32 @@ export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
+// Images saved in the database are referenced as "#fsimg-<id>". The page
+// renders them with data-fsimg="<id>" and app.js swaps in the real image.
+const FS_IMG = /^#fsimg-([A-Za-z0-9]{1,40})$/;
+export const fsImageId = (u) => { const m = FS_IMG.exec(String(u || '').trim()); return m ? m[1] : ''; };
+export const hasImg = (u) => !!(fsImageId(u) || safeUrl(u));
+export function imgSrc(u) {
+  const id = fsImageId(u);
+  if (id) return `data-fsimg="${id}"`;
+  const s = safeUrl(u);
+  return s ? `src="${esc(s)}"` : '';
+}
+
 // Markdown → sanitised HTML. Without the sanitiser it falls back to plain text.
 export function md(text) {
   const src = String(text || '');
   if (!window.marked || !window.DOMPurify) return `<p>${esc(src).replace(/\n/g, '<br>')}</p>`;
-  return window.DOMPurify.sanitize(window.marked.parse(src, { gfm: true, breaks: true }));
+  const html = window.DOMPurify.sanitize(window.marked.parse(src, { gfm: true, breaks: true }));
+  if (!html.includes('#fsimg-')) return html;
+  const t = document.createElement('template'); // inert: nothing loads while we rewrite
+  t.innerHTML = html;
+  t.content.querySelectorAll('img[src^="#fsimg-"]').forEach((img) => {
+    const id = fsImageId(img.getAttribute('src'));
+    img.removeAttribute('src');
+    if (id) img.dataset.fsimg = id;
+  });
+  return t.innerHTML;
 }
 
 // Markdown → plain text (for excerpts). <template> keeps images from loading.
@@ -156,13 +177,14 @@ export function confirmDialog(message, { ok = 'Delete', danger = true } = {}) {
 }
 
 // ── Images ──────────────────────────────────────────────────
-// Shrinks photos before upload so pages stay fast. GIFs are kept as they are.
-export async function resizeImage(file, max = 2000, quality = 0.86, keepUnder = 1.5e6) {
+// Shrinks photos before upload so pages stay fast. GIFs are kept as they are
+// unless forceJpeg is set.
+export async function resizeImage(file, max = 2000, quality = 0.86, keepUnder = 1.5e6, forceJpeg = false) {
   const type = file.type || '';
   if (!/^image\/(jpeg|png|webp|gif|heic|heif|avif)$/i.test(type)) {
     throw new Error('Please choose a JPG, PNG, WebP or GIF image.');
   }
-  if (type === 'image/gif') return file;
+  if (type === 'image/gif' && !forceJpeg) return file;
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -172,7 +194,7 @@ export async function resizeImage(file, max = 2000, quality = 0.86, keepUnder = 
       i.src = url;
     });
     const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const outType = type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const outType = type === 'image/png' && !forceJpeg ? 'image/png' : 'image/jpeg';
     if (scale === 1 && file.size <= keepUnder && outType === type) return file;
     const w = Math.max(1, Math.round(img.naturalWidth * scale));
     const h = Math.max(1, Math.round(img.naturalHeight * scale));
@@ -187,4 +209,20 @@ export async function resizeImage(file, max = 2000, quality = 0.86, keepUnder = 
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+export const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(r.result);
+  r.onerror = () => reject(new Error('Could not read the image.'));
+  r.readAsDataURL(blob);
+});
+
+// Re-encodes as JPEG, trying smaller sizes until the data URL fits in maxBytes.
+export async function fitDataUrl(file, steps, maxBytes) {
+  for (const [max, quality] of steps) {
+    const url = await blobToDataUrl(await resizeImage(file, max, quality, 0, true));
+    if (url.length <= maxBytes) return url;
+  }
+  throw new Error('That image is too large to save. Try a smaller one.');
 }
