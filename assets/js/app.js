@@ -219,6 +219,9 @@ function renderChrome() {
 function setNav(key) {
   state.nav = key;
   $$('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === key));
+  // Each menu page has its own background scene (see bg.js).
+  const scene = !key ? 'about' : key === 'inbox' ? 'contact' : key;
+  document.dispatchEvent(new CustomEvent('scene', { detail: scene }));
 }
 
 function renderBanner() {

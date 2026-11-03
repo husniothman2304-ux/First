@@ -172,14 +172,25 @@ code { font-family: var(--mono); }
 .glass-strong { background: var(--glass-strong); }
 
 /* ── Top bar ──────────────────────────────────────────── */
+/* The top bar is pinned with position: fixed on its own compositing layer.
+   (A sticky, frosted bar can flicker or vanish while scrolling on iPad/iPhone.)
+   body gets matching top padding so the page starts below it. */
+body { padding-top: calc(var(--topbar-h) + 12px + env(safe-area-inset-top, 0px)); }
+:root { --topbar-h: 54px; }
 .topbar {
-  position: sticky;
-  /* stay below the clock/notch on iPhone and iPad */
+  position: fixed;
   top: calc(12px + env(safe-area-inset-top, 0px));
-  z-index: 50;
+  left: 0;
+  right: 0;
+  z-index: 60;
   width: calc(100% - 32px);
   max-width: 1100px;
-  margin: calc(12px + env(safe-area-inset-top, 0px)) auto 0;
+  min-height: var(--topbar-h);
+  margin: 0 auto;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1183,3 +1194,35 @@ label .muted { font-weight: 450; }
   .chat-row { max-width: 86%; }
   .chat-head .btn.sm { padding: 6px 10px; }
 }
+
+/* ── Per-page background scenes ───────────────────────── */
+/* The light-leak hue changes with each menu page and fades smoothly
+   (where the browser supports animating registered properties). */
+@property --leak-h { syntax: '<number>'; inherits: true; initial-value: 9; }
+.bg {
+  --leak-h: 9;
+  --leak: hsl(var(--leak-h) 100% 63% / 0.55);
+  --leak-soft: hsl(var(--leak-h) 100% 72% / 0.22);
+  transition: --leak-h 1.4s ease;
+}
+@media (prefers-color-scheme: dark) {
+  .bg {
+    --leak: hsl(var(--leak-h) 100% 56% / 0.42);
+    --leak-soft: hsl(var(--leak-h) 100% 60% / 0.14);
+  }
+}
+.bg[data-scene="about"] { --leak-h: 9; }
+.bg[data-scene="projects"] { --leak-h: 26; }
+.bg[data-scene="course"] { --leak-h: 205; }
+.bg[data-scene="dump"] { --leak-h: 332; }
+.bg[data-scene="lifestyle"] { --leak-h: 42; }
+.bg[data-scene="contact"] { --leak-h: 262; }
+
+/* Leaving a page: the ribbons streak off along their own paths */
+.ribbons.drawn.leaving .rib path {
+  stroke-dashoffset: calc(var(--len) * -1);
+  transition: stroke-dashoffset 0.7s cubic-bezier(0.6, 0, 0.4, 1) 0s;
+}
+.ribbons.leaving .comet path { opacity: 0; animation: none; }
+/* Arriving on a page: a quicker draw-in than the very first one */
+.ribbons.quick .rib path { transition-duration: 1.5s; }

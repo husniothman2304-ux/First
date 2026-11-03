@@ -66,17 +66,54 @@ function el(name, attrs) {
   return e;
 }
 
-let currentLayout = '';
+// ── Scenes: every menu page gets its own ribbon arrangement and glow colour ──
+// "about" is the original poster layout; the others are variations of it
+// (mirrored, tilted, re-twisted) so they all feel like the same poster series.
+const SCENES = {
+  about: { seed: 0, mirror: false, tilt: 0 },
+  projects: { seed: 7, mirror: true, tilt: -0.2 },
+  course: { seed: 3, mirror: false, tilt: 0.14 },
+  dump: { seed: 11, mirror: true, tilt: 0.24 },
+  lifestyle: { seed: 5, mirror: false, tilt: -0.12 },
+  contact: { seed: 9, mirror: true, tilt: 0.06 },
+};
+const bgEl = svg ? svg.parentElement : null;
 
-function build() {
+const rand = (seed, i) => { const x = Math.sin(seed * 9301 + i * 49297 + 0.5) * 233280; return x - Math.floor(x); };
+
+function sceneLayout(base, sceneKey) {
+  const sc = SCENES[sceneKey] || SCENES.about;
+  if (!sc.seed) return base;
+  const [, , W, H] = base.view.split(' ').map(Number);
+  const move = (pt, i, k) => {
+    let [x, y, w] = pt;
+    if (sc.mirror) x = W - x;
+    y += sc.tilt * (x - W / 2) + (rand(sc.seed, i + k * 13) - 0.5) * H * 0.2;
+    if (w === undefined) return [x, y];
+    w *= 0.6 + rand(sc.seed + 1, i + k * 7) * 0.8;
+    if (rand(sc.seed + 2, i + k * 5) > 0.72) w = -w; // extra twists
+    return [x, y, w];
+  };
+  return {
+    view: base.view,
+    ribbons: base.ribbons.map((r, k) => ({ ...r, pts: r.pts.map((pt, i) => move(pt, i, k)) })),
+    trail: base.trail.map((pt, i) => move(pt, i, 9)),
+  };
+}
+
+let currentLayout = '';
+let currentScene = 'about';
+let leaveTimer = 0;
+
+function build(force = false) {
   if (!svg) return;
   const portrait = window.innerWidth / window.innerHeight < 0.85;
-  const layout = portrait ? PORTRAIT : LANDSCAPE;
   const key = portrait ? 'p' : 'l';
-  if (key === currentLayout) return;
+  if (key === currentLayout && !force) return;
   currentLayout = key;
+  const layout = sceneLayout(portrait ? PORTRAIT : LANDSCAPE, currentScene);
 
-  svg.classList.remove('drawn');
+  svg.classList.remove('drawn', 'leaving');
   svg.setAttribute('viewBox', layout.view);
   svg.replaceChildren();
 
@@ -113,6 +150,21 @@ function build() {
   afterIntro(() => requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.add('drawn'))));
 }
 
+// Called by the app whenever the visitor opens another menu page.
+function changeScene(key) {
+  if (!SCENES[key] || key === currentScene) return;
+  currentScene = key;
+  if (bgEl) bgEl.dataset.scene = key; // the glow colour follows via CSS
+  clearTimeout(leaveTimer);
+  if (!svg.classList.contains('drawn') || reduceMotion) { build(true); return; }
+  // Old ribbons streak away, then the new scene draws in (a little faster than the first time).
+  svg.classList.add('leaving');
+  leaveTimer = setTimeout(() => {
+    svg.classList.add('quick');
+    build(true);
+  }, 700);
+}
+
 function afterIntro(fn) {
   if (document.documentElement.classList.contains('intro-playing')) {
     document.addEventListener('introdone', fn, { once: true });
@@ -137,6 +189,7 @@ function queue() {
 
 if (svg) {
   build();
+  document.addEventListener('scene', (e) => changeScene(e.detail));
   let resizeTimer;
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(build, 200); });
 
