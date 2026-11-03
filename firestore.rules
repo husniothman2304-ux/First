@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// These rules are what really protects the site. Hiding buttons in the page is
+// only cosmetic; Firebase checks every read and write against the rules below.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ⚠️ Replace with your own user ID. The site shows it after you sign in once.
+    function isOwner() {
+      return request.auth != null && request.auth.uid == 'REPLACE_WITH_YOUR_UID';
+    }
+
+    function str(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    function itemPublished(itemId) {
+      return get(/databases/$(database)/documents/items/$(itemId)).data.published == true;
+    }
+
+    // Profile (name, bio, avatar): everyone can read it, only the owner can change it.
+    match /site/{docId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Projects, notes, blog posts and photos. Drafts are visible only to the owner.
+    match /items/{itemId} {
+      allow read: if isOwner() || resource.data.published == true;
+      allow write: if isOwner();
+
+      // Public comments: anyone can read and add comments on published items.
+      // Nobody can edit a comment; only the owner can delete one.
+      match /comments/{commentId} {
+        allow read: if isOwner() || itemPublished(itemId);
+        allow create: if (isOwner() || itemPublished(itemId))
+          && request.resource.data.keys().hasOnly(['name', 'text', 'owner', 'createdAt'])
+          && str(request.resource.data.name, 1, 60)
+          && str(request.resource.data.text, 1, 2000)
+          && request.resource.data.createdAt == request.time
+          && (request.resource.data.get('owner', false) == false || isOwner());
+        allow update: if false;
+        allow delete: if isOwner();
+      }
+    }
+
+    // Private messages: anyone can send one, only the owner can read them.
+    match /messages/{messageId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'text', 'read', 'createdAt'])
+        && str(request.resource.data.name, 1, 80)
+        && str(request.resource.data.email, 0, 120)
+        && str(request.resource.data.text, 1, 5000)
+        && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isOwner();
+    }
+  }
+}
