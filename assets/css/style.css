@@ -123,11 +123,12 @@ code { font-family: var(--mono); }
 /* ── Top bar ──────────────────────────────────────────── */
 .topbar {
   position: sticky;
-  top: 12px;
+  /* stay below the clock/notch on iPhone and iPad */
+  top: calc(12px + env(safe-area-inset-top, 0px));
   z-index: 50;
   width: calc(100% - 32px);
   max-width: 1100px;
-  margin: 12px auto 0;
+  margin: calc(12px + env(safe-area-inset-top, 0px)) auto 0;
   display: flex;
   align-items: center;
   gap: 12px;
