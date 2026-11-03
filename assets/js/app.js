@@ -451,10 +451,44 @@ const newThreadId = () => {
 };
 const validThreadId = (id) => /^[A-Za-z0-9]{20,40}$/.test(id || '');
 
+// Remembers the visitor's chat in several places, so a refresh (or a browser
+// that blocks one kind of storage) never loses it: localStorage, this tab's
+// sessionStorage, a cookie, and window.name (which survives reloads of the
+// same tab even when all storage is blocked).
+const WIN_PREFIX = 'hs-chat:';
+const chatStore = {
+  get() {
+    const fromCookie = (document.cookie.match(new RegExp(`(?:^|; )${CHAT_KEY}=([A-Za-z0-9]+)`)) || [])[1];
+    const fromWindow = String(window.name || '').startsWith(WIN_PREFIX) ? window.name.slice(WIN_PREFIX.length) : '';
+    let fromSession = '';
+    try { fromSession = sessionStorage.getItem(CHAT_KEY) || ''; } catch { /* blocked */ }
+    const id = [store.get(CHAT_KEY), fromSession, fromCookie, fromWindow].find(validThreadId) || '';
+    if (id) chatStore.set(id); // copy it back into any place that lost it
+    return id;
+  },
+  set(id) {
+    if (!validThreadId(id)) return;
+    store.set(CHAT_KEY, id);
+    try { sessionStorage.setItem(CHAT_KEY, id); } catch { /* blocked */ }
+    try {
+      document.cookie = `${CHAT_KEY}=${id}; Max-Age=31536000; Path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
+    } catch { /* blocked */ }
+    try { window.name = WIN_PREFIX + id; } catch { /* ignore */ }
+  },
+  clear() {
+    store.set(CHAT_KEY, '');
+    try { sessionStorage.removeItem(CHAT_KEY); } catch { /* blocked */ }
+    try { document.cookie = `${CHAT_KEY}=; Max-Age=0; Path=/; SameSite=Lax`; } catch { /* blocked */ }
+    if (String(window.name || '').startsWith(WIN_PREFIX)) window.name = '';
+  },
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function viewContact(ctx, linkId) {
   // Opened from a "continue on another device" link: remember that chat.
   if (validThreadId(linkId)) {
-    store.set(CHAT_KEY, linkId);
+    chatStore.set(linkId);
     startGuestWatch();
     location.replace('#/contact');
     return;
@@ -473,12 +507,44 @@ async function viewContact(ctx, linkId) {
       </section>`);
   }
 
-  const id = store.get(CHAT_KEY);
-  const thread = validThreadId(id) ? await api.getThread(id).catch(() => null) : null;
+  const id = chatStore.get();
+  let thread = null;
+  let loadError = null;
+  if (id) {
+    // Right after a refresh the connection may still be starting, so retry a few times.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        thread = await api.getThread(id);
+        loadError = null;
+        break;
+      } catch (e) {
+        loadError = e;
+        console.warn('Could not load chat, retrying', e);
+        await sleep(700 * (attempt + 1));
+        if (ctx.stale()) return;
+      }
+    }
+  }
   if (ctx.stale()) return;
 
+  if (id && loadError) {
+    // Keep the saved chat; just offer to try again.
+    return render(ctx, `
+      <section class="contact glass">
+        <div class="contact-head">
+          <span class="icon-bubble">${icon('chat')}</span>
+          <h1>Reconnecting to your chat…</h1>
+          <p class="muted">Your conversation with ${esc(p.name)} is saved, but it couldn't be loaded just now.
+          Check your connection and try again.</p>
+        </div>
+        <div class="row" style="justify-content:center"><button class="btn primary" data-act="retry">Try again</button></div>
+      </section>`);
+  }
+
+  const closed = id && !thread; // the chat was deleted by the owner
+  if (closed) chatStore.clear();
+
   if (!thread) {
-    if (id) store.set(CHAT_KEY, '');
     return render(ctx, `
       <section class="contact glass">
         <div class="contact-head">
@@ -486,6 +552,7 @@ async function viewContact(ctx, linkId) {
           <h1>Chat with ${esc(p.name)}</h1>
           <p class="muted">A private conversation: only you and ${esc(p.name)} can see it.
           Come back to this page any time to read replies and keep chatting.</p>
+          ${closed ? `<p class="muted small">Your previous chat was closed by ${esc(p.name)}.</p>` : ''}
         </div>
         <form class="chat-start stack">
           <label>Your name<input name="name" required maxlength="80" autocomplete="name" value="${esc(store.get('commenter-name') || '')}"></label>
@@ -530,7 +597,7 @@ async function startChat(form) {
     const id = newThreadId();
     await api.createThread(id, { name: name.slice(0, 80), email: email.slice(0, 120) });
     await api.sendChat(id, { from: 'guest', text: text.slice(0, 4000), image: '', sticker: '' });
-    store.set(CHAT_KEY, id);
+    chatStore.set(id);
     store.set('commenter-name', name);
   });
   startGuestWatch();
@@ -650,7 +717,7 @@ function startOwnerWatch() {
 }
 function startGuestWatch() {
   if (guestWatch) { guestWatch(); guestWatch = null; }
-  const id = store.get(CHAT_KEY);
+  const id = chatStore.get();
   if (state.owner || !validThreadId(id)) return;
   guestWatch = api.watchThread(id, (t) => {
     const unread = !!(t && t.unreadGuest);
@@ -1050,7 +1117,7 @@ document.addEventListener('click', async (e) => {
         }
         break;
       case 'chat-link': {
-        const link = `${location.origin}${location.pathname}#/contact/${store.get(CHAT_KEY)}`;
+        const link = `${location.origin}${location.pathname}#/contact/${chatStore.get()}`;
         openModal({
           title: 'Continue on another device',
           body: `<p class="muted" style="margin-top:0">Open this link on your other phone, tablet or computer to keep chatting there.
@@ -1060,9 +1127,12 @@ document.addEventListener('click', async (e) => {
         });
         break;
       }
+      case 'retry':
+        route({ keepScroll: true });
+        break;
       case 'chat-new':
         if (await confirmDialog('Start a new chat? This browser will stop showing your current conversation (it isn’t deleted).', { ok: 'Start new chat', danger: false })) {
-          store.set(CHAT_KEY, '');
+          chatStore.clear();
           startGuestWatch();
           state.guestUnread = false;
           renderChrome();

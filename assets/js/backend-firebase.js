@@ -188,14 +188,11 @@ export async function createThread(id, { name, email = '' }) {
   });
 }
 
+// Returns null only when the chat really doesn't exist (e.g. it was deleted).
+// Network problems throw, so callers never mistake them for a missing chat.
 export async function getThread(id) {
-  try {
-    const s = await getDoc(doc(db, 'threads', id));
-    return s.exists() ? conv(s) : null;
-  } catch (e) {
-    if (e.code === 'permission-denied') return null;
-    throw e;
-  }
+  const s = await getDoc(doc(db, 'threads', id));
+  return s.exists() ? conv(s) : null;
 }
 
 export function watchThread(id, cb) {
