@@ -167,3 +167,60 @@ export async function uploadImage(blob) {
 export async function getImage() { return ''; }
 
 export async function deleteUpload() { /* data URLs live inside the items */ }
+
+// ── Chats ───────────────────────────────────────────────────
+// Stored with everything else in localStorage. Listeners fire on every
+// change, and also when another tab of this browser changes the data.
+const chatListeners = new Set();
+const chatPreview = ({ text, image, sticker }) => (text ? text.slice(0, 120) : image ? '📷 Photo' : sticker ? 'Sticker' : '');
+
+function threads() { return (db.threads ||= {}); }
+function emitChats() { chatListeners.forEach((fn) => fn()); }
+function listen(fn) { chatListeners.add(fn); fn(); return () => chatListeners.delete(fn); }
+
+window.addEventListener('storage', (e) => {
+  if (e.key !== KEY || !e.newValue) return;
+  try { Object.assign(db, JSON.parse(e.newValue)); emitChats(); } catch { /* ignore */ }
+});
+
+const meta = (t) => { if (!t) return null; const { msgs, ...m } = t; return clone(m); };
+
+export async function createThread(id, { name, email = '' }) {
+  const now = Date.now();
+  threads()[id] = { id, name, email, createdAt: now, lastAt: now, lastText: '', lastFrom: 'guest', unreadOwner: false, unreadGuest: false, msgs: [] };
+  persist();
+  emitChats();
+}
+
+export async function getThread(id) { return meta(threads()[id]); }
+export function watchThread(id, cb) { return listen(() => cb(meta(threads()[id]))); }
+export function watchMessages(id, cb) { return listen(() => cb(clone((threads()[id] || {}).msgs || []))); }
+
+export async function sendChat(id, { from, text = '', image = '', sticker = '' }) {
+  const t = threads()[id];
+  if (!t) throw new Error('This conversation no longer exists.');
+  const now = Date.now();
+  t.msgs.push({ id: newId(), from, text, image, sticker, createdAt: now });
+  Object.assign(t, { lastAt: now, lastText: chatPreview({ text, image, sticker }), lastFrom: from });
+  if (from === 'owner') t.unreadGuest = true; else t.unreadOwner = true;
+  persist();
+  emitChats();
+}
+
+export async function markThreadRead(id, who) {
+  const t = threads()[id];
+  if (!t) return;
+  if (who === 'owner') t.unreadOwner = false; else t.unreadGuest = false;
+  persist();
+  emitChats();
+}
+
+export function watchThreads(cb) {
+  return listen(() => cb(Object.values(threads()).map(meta).sort((a, b) => b.lastAt - a.lastAt)));
+}
+
+export async function deleteThread(id) {
+  delete threads()[id];
+  persist();
+  emitChats();
+}

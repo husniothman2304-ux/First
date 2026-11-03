@@ -8,7 +8,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, setDoc, deleteDoc,
-  query, where, limit, serverTimestamp,
+  query, where, limit, serverTimestamp, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { FIREBASE_CONFIG } from './config.js';
 import { fitDataUrl } from './ui.js';
@@ -55,8 +55,8 @@ export async function signOut() {
 // ── Helpers ─────────────────────────────────────────────────
 const ms = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : typeof t === 'number' ? t : Date.now());
 const conv = (d) => {
-  const x = d.data();
-  return { ...x, id: d.id, createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) };
+  const x = d.data({ serverTimestamps: 'estimate' });
+  return { ...x, id: d.id, createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt), lastAt: ms(x.lastAt) };
 };
 
 // ── Profile ─────────────────────────────────────────────────
@@ -174,4 +174,61 @@ export async function getImage(id) {
 export async function deleteUpload(path) {
   const m = /^images\/([A-Za-z0-9]{1,40})$/.exec(path || '');
   if (m) await deleteDoc(doc(db, 'images', m[1]));
+}
+
+// ── Chats (two-way conversations with visitors) ─────────────
+// A chat lives at threads/{id}. The id is long and random, and works like a
+// private link: only the visitor's browser (and the owner) know it.
+const preview = ({ text, image, sticker }) => (text ? text.slice(0, 120) : image ? '📷 Photo' : sticker ? 'Sticker' : '');
+
+export async function createThread(id, { name, email = '' }) {
+  await setDoc(doc(db, 'threads', id), {
+    name, email, createdAt: serverTimestamp(), lastAt: serverTimestamp(),
+    lastText: '', lastFrom: 'guest', unreadOwner: false, unreadGuest: false,
+  });
+}
+
+export async function getThread(id) {
+  try {
+    const s = await getDoc(doc(db, 'threads', id));
+    return s.exists() ? conv(s) : null;
+  } catch (e) {
+    if (e.code === 'permission-denied') return null;
+    throw e;
+  }
+}
+
+export function watchThread(id, cb) {
+  return onSnapshot(doc(db, 'threads', id),
+    (s) => cb(s.exists() ? conv(s) : null),
+    (e) => { console.warn(e); cb(null); });
+}
+
+export function watchMessages(id, cb) {
+  return onSnapshot(collection(db, 'threads', id, 'msgs'),
+    (snap) => cb(snap.docs.map(conv).sort((a, b) => a.createdAt - b.createdAt)),
+    (e) => console.warn(e));
+}
+
+export async function sendChat(id, { from, text = '', image = '', sticker = '' }) {
+  await addDoc(collection(db, 'threads', id, 'msgs'), { from, text, image, sticker, createdAt: serverTimestamp() });
+  await updateDoc(doc(db, 'threads', id), from === 'owner'
+    ? { lastAt: serverTimestamp(), lastText: preview({ text, image, sticker }), lastFrom: 'owner', unreadGuest: true }
+    : { lastAt: serverTimestamp(), lastText: preview({ text, image, sticker }), lastFrom: 'guest', unreadOwner: true });
+}
+
+export async function markThreadRead(id, who) {
+  await updateDoc(doc(db, 'threads', id), who === 'owner' ? { unreadOwner: false } : { unreadGuest: false });
+}
+
+export function watchThreads(cb) {
+  return onSnapshot(collection(db, 'threads'),
+    (snap) => cb(snap.docs.map(conv).sort((a, b) => b.lastAt - a.lastAt)),
+    (e) => console.warn(e));
+}
+
+export async function deleteThread(id) {
+  const msgs = await getDocs(collection(db, 'threads', id, 'msgs'));
+  await Promise.all(msgs.docs.map((d) => deleteDoc(d.ref)));
+  await deleteDoc(doc(db, 'threads', id));
 }

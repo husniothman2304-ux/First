@@ -56,7 +56,50 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
-    // Private messages: anyone can send one, only the owner can read them.
+    // Two-way chats. A chat's id is long and random and works like a private
+    // link: the visitor's browser keeps it. Nobody can list chats except the
+    // owner, so a chat can only be opened by someone who has its id.
+    match /threads/{threadId} {
+      allow get: if true;
+      allow list: if isOwner();
+      allow create: if threadId.size() >= 20
+        && request.resource.data.keys().hasOnly(['name', 'email', 'createdAt', 'lastAt', 'lastText', 'lastFrom', 'unreadOwner', 'unreadGuest'])
+        && str(request.resource.data.name, 1, 80)
+        && str(request.resource.data.email, 0, 120)
+        && request.resource.data.lastText == ''
+        && request.resource.data.lastFrom == 'guest'
+        && request.resource.data.unreadOwner == false
+        && request.resource.data.unreadGuest == false
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.lastAt == request.time;
+      allow update: if isOwner()
+        // the visitor sent a message
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAt', 'lastText', 'lastFrom', 'unreadOwner'])
+            && request.resource.data.lastFrom == 'guest'
+            && request.resource.data.unreadOwner == true
+            && request.resource.data.lastAt == request.time
+            && str(request.resource.data.lastText, 0, 120))
+        // the visitor read the owner's reply
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadGuest'])
+            && request.resource.data.unreadGuest == false);
+      allow delete: if isOwner();
+
+      match /msgs/{msgId} {
+        allow read: if true;
+        allow create: if exists(/databases/$(database)/documents/threads/$(threadId))
+          && request.resource.data.keys().hasOnly(['from', 'text', 'image', 'sticker', 'createdAt'])
+          && ((isOwner() && request.resource.data.from == 'owner') || (!isOwner() && request.resource.data.from == 'guest'))
+          && str(request.resource.data.text, 0, 4000)
+          && str(request.resource.data.image, 0, 360000)
+          && str(request.resource.data.sticker, 0, 24)
+          && (request.resource.data.text.size() > 0 || request.resource.data.image.size() > 0 || request.resource.data.sticker.size() > 0)
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner();
+      }
+    }
+
+    // Older one-way messages: anyone can send one, only the owner can read them.
     match /messages/{messageId} {
       allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'text', 'read', 'createdAt'])
         && str(request.resource.data.name, 1, 80)

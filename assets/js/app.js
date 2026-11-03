@@ -1,4 +1,5 @@
 import { loadBackend } from './backend.js';
+import { mountChat } from './chat.js';
 import { DEFAULT_PROFILE } from './config.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
@@ -26,7 +27,11 @@ const byKey = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
 const byType = Object.fromEntries(SECTIONS.map((s) => [s.type, s]));
 const HOME_LIMIT = { project: 3, note: 4, blog: 3, photo: 6 };
 
-const state = { user: null, owner: false, profile: { ...DEFAULT_PROFILE }, unread: 0, nav: '' };
+const state = {
+  user: null, owner: false, profile: { ...DEFAULT_PROFILE }, nav: '',
+  unread: 0, unreadLegacy: 0, unreadThreads: 0, guestUnread: false,
+};
+let viewCleanups = [];
 let routeToken = 0;
 
 // ── Small render helpers ────────────────────────────────────
@@ -179,8 +184,9 @@ function renderChrome() {
     ...SECTIONS.map((s) => ({ key: s.key, label: s.label, icon: s.icon })),
     { key: 'contact', label: 'Contact', icon: 'mail' },
   ];
-  $('#nav-links').innerHTML = links.map((l) => `<a href="#/${l.key}" data-nav="${l.key}">${esc(l.label)}</a>`).join('');
-  $('#tabbar').innerHTML = links.map((l) => `<a href="#/${l.key}" data-nav="${l.key}">${icon(l.icon)}<span>${esc(l.label)}</span></a>`).join('');
+  const dot = (l) => (l.key === 'contact' && state.guestUnread ? '<span class="dot-new" aria-label="New reply"></span>' : '');
+  $('#nav-links').innerHTML = links.map((l) => `<a href="#/${l.key}" data-nav="${l.key}">${esc(l.label)}${dot(l)}</a>`).join('');
+  $('#tabbar').innerHTML = links.map((l) => `<a href="#/${l.key}" data-nav="${l.key}">${icon(l.icon)}<span>${esc(l.label)}</span>${dot(l)}</a>`).join('');
 
   $('#nav-actions').innerHTML = state.owner ? `
     <button class="icon-btn" data-act="new" title="Add something" aria-label="Add something">${icon('plus')}</button>
@@ -217,13 +223,15 @@ function renderBanner() {
 }
 
 async function refreshUnread() {
-  state.unread = 0;
-  if (!state.owner) return;
-  try {
-    state.unread = (await api.listMessages()).filter((m) => !m.read).length;
-  } catch (e) {
-    console.warn(e);
+  state.unreadLegacy = 0;
+  if (state.owner) {
+    try {
+      state.unreadLegacy = (await api.listMessages()).filter((m) => !m.read).length;
+    } catch (e) {
+      console.warn(e);
+    }
   }
+  state.unread = state.unreadLegacy + (state.unreadThreads || 0);
 }
 
 // ── Router ──────────────────────────────────────────────────
@@ -231,7 +239,14 @@ async function route({ keepScroll = false } = {}) {
   const token = ++routeToken;
   const [seg = '', arg = ''] = location.hash.replace(/^#\/?/, '').split('/');
   const view = $('#view');
-  const ctx = { view, stale: () => token !== routeToken };
+  // Stop live listeners from the previous page (open chats etc.)
+  viewCleanups.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
+  viewCleanups = [];
+  const ctx = {
+    view,
+    stale: () => token !== routeToken,
+    cleanup: (fn) => { if (token !== routeToken) fn(); else viewCleanups.push(fn); },
+  };
 
   setNav(seg === 'p' ? state.nav : seg);
   if (!keepScroll) {
@@ -242,8 +257,8 @@ async function route({ keepScroll = false } = {}) {
     if (!seg) await viewHome(ctx);
     else if (byKey[seg]) await viewSection(ctx, byKey[seg]);
     else if (seg === 'p' && arg) await viewItem(ctx, decodeURIComponent(arg));
-    else if (seg === 'contact') viewContact(ctx);
-    else if (seg === 'inbox') await viewInbox(ctx);
+    else if (seg === 'contact') await viewContact(ctx, arg);
+    else if (seg === 'inbox') await viewInbox(ctx, decodeURIComponent(arg));
     else viewNotFound(ctx);
   } catch (e) {
     console.error(e);
@@ -427,54 +442,123 @@ async function reloadComments(itemId) {
   if (box) box.innerHTML = commentsHTML(itemId, await api.listComments(itemId));
 }
 
-function viewContact(ctx) {
-  render(ctx, `
-    <section class="contact glass">
-      <div class="contact-head">
-        <span class="icon-bubble">${icon('lock')}</span>
-        <h1>Send me a private message</h1>
-        <p class="muted">Only ${esc(state.profile.name)} can read this. Add your email if you'd like a reply.</p>
-      </div>
-      <form class="contact-form stack">
-        <label>Name<input name="name" required maxlength="80" autocomplete="name"></label>
-        <label>Email <span class="muted">(optional)</span><input name="email" type="email" maxlength="120" autocomplete="email"></label>
-        <label>Message<textarea name="text" required maxlength="5000" rows="6"></textarea></label>
-        <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <button class="btn primary big" type="submit">${icon('mail')} Send message</button>
-      </form>
+// ── Contact: two-way chat (visitor side) ────────────────────
+const CHAT_KEY = 'chat-thread';
+const newThreadId = () => {
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(28));
+  return Array.from(bytes, (b) => abc[b % abc.length]).join('');
+};
+const validThreadId = (id) => /^[A-Za-z0-9]{20,40}$/.test(id || '');
+
+async function viewContact(ctx, linkId) {
+  // Opened from a "continue on another device" link: remember that chat.
+  if (validThreadId(linkId)) {
+    store.set(CHAT_KEY, linkId);
+    startGuestWatch();
+    location.replace('#/contact');
+    return;
+  }
+  const p = state.profile;
+  if (state.owner) {
+    return render(ctx, `
+      <section class="contact glass">
+        <div class="contact-head">
+          <span class="icon-bubble">${icon('chat')}</span>
+          <h1>Your chats live in the Inbox</h1>
+          <p class="muted">You're signed in as the owner. Visitors start chats with you on this page.
+          To see exactly what they see, open your site in a private tab.</p>
+        </div>
+        <div class="row" style="justify-content:center"><a class="btn primary" href="#/inbox">${icon('inbox')} Open Inbox</a></div>
+      </section>`);
+  }
+
+  const id = store.get(CHAT_KEY);
+  const thread = validThreadId(id) ? await api.getThread(id).catch(() => null) : null;
+  if (ctx.stale()) return;
+
+  if (!thread) {
+    if (id) store.set(CHAT_KEY, '');
+    return render(ctx, `
+      <section class="contact glass">
+        <div class="contact-head">
+          <span class="icon-bubble">${icon('lock')}</span>
+          <h1>Chat with ${esc(p.name)}</h1>
+          <p class="muted">A private conversation: only you and ${esc(p.name)} can see it.
+          Come back to this page any time to read replies and keep chatting.</p>
+        </div>
+        <form class="chat-start stack">
+          <label>Your name<input name="name" required maxlength="80" autocomplete="name" value="${esc(store.get('commenter-name') || '')}"></label>
+          <label>Email <span class="muted">(optional, only ${esc(p.name)} sees it)</span><input name="email" type="email" maxlength="120" autocomplete="email"></label>
+          <label>Message<textarea name="text" required maxlength="4000" rows="4" placeholder="Say hello 👋"></textarea></label>
+          <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn primary big" type="submit">${icon('chat')} Start chat</button>
+        </form>
+      </section>`);
+  }
+
+  const ok = render(ctx, `
+    <section class="chat glass">
+      <header class="chat-head">
+        ${avatarHTML(p, 'sm')}
+        <div class="chat-who">
+          <strong>${esc(p.name)}</strong>
+          <span class="muted small">Private chat · you're ${esc(thread.name)}</span>
+        </div>
+        <button class="btn sm" data-act="chat-link" title="Open this chat on another device">${icon('link')} Other device</button>
+      </header>
+      <div class="chat-mount"></div>
+      <p class="chat-foot muted small">Only you and ${esc(p.name)} can see this chat.
+        <button class="link-btn small" data-act="chat-new">Start a new chat</button></p>
     </section>`);
+  if (!ok) return;
+  ctx.cleanup(mountChat($('.chat-mount', ctx.view), {
+    api, threadId: thread.id, me: 'guest', emptyText: `Say hello to ${p.name} 👋`,
+  }));
 }
 
-async function viewInbox(ctx) {
+async function startChat(form) {
+  const fd = new FormData(form);
+  if (fd.get('website')) return; // bots fill in the hidden field
+  const name = String(fd.get('name') || '').trim();
+  const email = String(fd.get('email') || '').trim();
+  const text = String(fd.get('text') || '').trim();
+  if (!name || !text) return toast('Please add your name and a message.', 'error');
+  if (email && !form.email.checkValidity()) return toast('That email address doesn’t look right.', 'error');
+
+  await withBusy(form.querySelector('[type=submit]'), 'Starting…', async () => {
+    const id = newThreadId();
+    await api.createThread(id, { name: name.slice(0, 80), email: email.slice(0, 120) });
+    await api.sendChat(id, { from: 'guest', text: text.slice(0, 4000), image: '', sticker: '' });
+    store.set(CHAT_KEY, id);
+    store.set('commenter-name', name);
+  });
+  startGuestWatch();
+  route({ keepScroll: true });
+}
+
+// ── Inbox (owner side) ──────────────────────────────────────
+async function viewInbox(ctx, threadId) {
   if (!state.owner) {
     return render(ctx, `<div class="empty glass">${icon('lock', 'xl')}<h2>This page is private</h2>
       <p class="muted">Only the owner can see the inbox.</p></div>`);
   }
-  const msgs = await api.listMessages();
+  if (threadId) return viewInboxChat(ctx, threadId);
+
+  const legacy = await api.listMessages().catch(() => []);
+  if (ctx.stale()) return;
   const ok = render(ctx, `
     <header class="page-head glass">
       <div><h1>${icon('inbox')} Inbox</h1>
-      <p class="muted">${msgs.length ? `${msgs.length} message${msgs.length > 1 ? 's' : ''}, ${msgs.filter((m) => !m.read).length} unread` : 'Private messages from visitors appear here.'}</p></div>
+      <p class="muted">Chats with visitors. Open one to reply.</p></div>
     </header>
-    ${msgs.length ? `<div class="messages">${msgs.map((m) => `
-      <details class="msg glass ${m.read ? '' : 'unread'}" data-id="${esc(m.id)}">
-        <summary>
-          <span class="dot" aria-hidden="true"></span>
-          <strong>${esc(m.name)}</strong>
-          <span class="preview muted">${esc(m.text.slice(0, 90))}</span>
-          <time class="meta">${fmtDate(m.createdAt, true)}</time>
-        </summary>
-        <div class="msg-body">
-          <p class="muted small">${m.email ? `<a href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : 'No email given'}</p>
-          <p class="msg-text">${esc(m.text)}</p>
-          <div class="row">
-            ${m.email ? `<a class="btn sm primary" href="mailto:${esc(m.email)}?subject=${encodeURIComponent('Re: your message')}">${icon('mail')} Reply by email</a>` : ''}
-            <button class="btn sm" data-act="toggle-read" data-id="${esc(m.id)}">${m.read ? 'Mark as unread' : 'Mark as read'}</button>
-            <button class="btn sm danger" data-act="del-msg" data-id="${esc(m.id)}">${icon('trash')} Delete</button>
-          </div>
-        </div>
-      </details>`).join('')}</div>`
-    : `<div class="empty glass">${icon('inbox', 'xl')}<p>No messages yet.</p></div>`}`);
+    <div class="threads"><div class="loading"><div class="spinner"></div></div></div>
+    ${legacy.length ? `
+      <section class="block">
+        <div class="block-head"><h2>${icon('mail')} Older messages</h2></div>
+        <p class="muted small" style="margin:0 4px">Sent before chat existed. Reply by email, or ask them to start a chat on your Contact page.</p>
+        <div class="messages">${legacy.map(legacyMsgHTML).join('')}</div>
+      </section>` : ''}`);
   if (!ok) return;
 
   $$('.msg', ctx.view).forEach((d) => d.addEventListener('toggle', async () => {
@@ -486,11 +570,98 @@ async function viewInbox(ctx) {
       updateUnreadFromDom();
     } catch (e) { console.warn(e); }
   }));
+
+  ctx.cleanup(api.watchThreads((list) => {
+    const box = $('.threads', ctx.view);
+    if (!box) return;
+    box.innerHTML = list.length ? list.map((t) => `
+      <a class="thread glass ${t.unreadOwner ? 'unread' : ''}" href="#/inbox/${esc(t.id)}">
+        <span class="avatar sm initials hued" style="--h:${hue(t.name)}" aria-hidden="true">${esc(initials(t.name))}</span>
+        <span class="thread-main">
+          <strong>${esc(t.name)}</strong>
+          <span class="muted">${t.lastFrom === 'owner' ? 'You: ' : ''}${esc(t.lastText || 'New chat')}</span>
+        </span>
+        <span class="thread-side"><time class="meta">${fmtDate(t.lastAt, true)}</time>${t.unreadOwner ? '<span class="dot-new" aria-label="Unread"></span>' : ''}</span>
+      </a>`).join('')
+      : `<div class="empty glass">${icon('chat', 'xl')}<p>No chats yet. When someone messages you from the Contact page, it shows up here.</p></div>`;
+  }));
+}
+
+function legacyMsgHTML(m) {
+  return `
+    <details class="msg glass ${m.read ? '' : 'unread'}" data-id="${esc(m.id)}">
+      <summary>
+        <span class="dot" aria-hidden="true"></span>
+        <strong>${esc(m.name)}</strong>
+        <span class="preview muted">${esc(m.text.slice(0, 90))}</span>
+        <time class="meta">${fmtDate(m.createdAt, true)}</time>
+      </summary>
+      <div class="msg-body">
+        <p class="muted small">${m.email ? `<a href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : 'No email given'}</p>
+        <p class="msg-text">${esc(m.text)}</p>
+        <div class="row">
+          ${m.email ? `<a class="btn sm primary" href="mailto:${esc(m.email)}?subject=${encodeURIComponent('Re: your message')}">${icon('mail')} Reply by email</a>` : ''}
+          <button class="btn sm" data-act="toggle-read" data-id="${esc(m.id)}">${m.read ? 'Mark as unread' : 'Mark as read'}</button>
+          <button class="btn sm danger" data-act="del-msg" data-id="${esc(m.id)}">${icon('trash')} Delete</button>
+        </div>
+      </div>
+    </details>`;
+}
+
+async function viewInboxChat(ctx, threadId) {
+  const t = validThreadId(threadId) ? await api.getThread(threadId) : null;
+  if (!t) return viewNotFound(ctx);
+  const ok = render(ctx, `
+    <section class="chat glass">
+      <header class="chat-head">
+        <a class="icon-btn" href="#/inbox" title="Back to Inbox" aria-label="Back to Inbox">${icon('back')}</a>
+        <span class="avatar sm initials hued" style="--h:${hue(t.name)}" aria-hidden="true">${esc(initials(t.name))}</span>
+        <div class="chat-who">
+          <strong>${esc(t.name)}</strong>
+          <span class="muted small">${t.email ? `<a href="mailto:${esc(t.email)}">${esc(t.email)}</a>` : 'No email given'} · started ${fmtDate(t.createdAt)}</span>
+        </div>
+        <button class="icon-btn" data-act="del-thread" data-id="${esc(t.id)}" title="Delete chat" aria-label="Delete chat">${icon('trash')}</button>
+      </header>
+      <div class="chat-mount"></div>
+    </section>`);
+  if (!ok) return;
+  ctx.cleanup(mountChat($('.chat-mount', ctx.view), { api, threadId: t.id, me: 'owner', emptyText: 'No messages yet.' }));
 }
 
 function updateUnreadFromDom() {
-  state.unread = $$('.msg.unread').length;
+  state.unreadLegacy = $$('.msg.unread').length;
+  updateUnreadTotal();
+}
+
+function updateUnreadTotal() {
+  state.unread = (state.unreadLegacy || 0) + (state.unreadThreads || 0);
   renderChrome();
+}
+
+// Live badges: owner sees unread chats; a visitor sees a dot on Contact when you reply.
+let ownerWatch = null;
+let guestWatch = null;
+function startOwnerWatch() {
+  if (ownerWatch) return;
+  ownerWatch = api.watchThreads((list) => {
+    state.unreadThreads = list.filter((t) => t.unreadOwner).length;
+    updateUnreadTotal();
+  });
+}
+function startGuestWatch() {
+  if (guestWatch) { guestWatch(); guestWatch = null; }
+  const id = store.get(CHAT_KEY);
+  if (state.owner || !validThreadId(id)) return;
+  guestWatch = api.watchThread(id, (t) => {
+    const unread = !!(t && t.unreadGuest);
+    if (unread !== state.guestUnread) { state.guestUnread = unread; renderChrome(); }
+  });
+}
+function stopWatches() {
+  if (ownerWatch) { ownerWatch(); ownerWatch = null; }
+  if (guestWatch) { guestWatch(); guestWatch = null; }
+  state.unreadThreads = 0;
+  state.guestUnread = false;
 }
 
 function viewNotFound(ctx) {
@@ -524,26 +695,6 @@ async function submitComment(form) {
   });
   await reloadComments(itemId);
   toast('Comment posted');
-}
-
-async function submitMessage(form) {
-  const fd = new FormData(form);
-  if (fd.get('website')) return;
-  const name = String(fd.get('name') || '').trim();
-  const email = String(fd.get('email') || '').trim();
-  const text = String(fd.get('text') || '').trim();
-  if (!name || !text) return toast('Please add your name and a message.', 'error');
-  if (email && !form.email.checkValidity()) return toast('That email address doesn’t look right.', 'error');
-  const last = Number(store.get('last-message-at')) || 0;
-  if (Date.now() - last < 30000) return toast('Please wait a moment before sending another message.', 'error');
-
-  await withBusy(form.querySelector('[type=submit]'), 'Sending…', () =>
-    api.sendMessage({ name: name.slice(0, 80), email: email.slice(0, 120), text: text.slice(0, 5000) }));
-  store.set('last-message-at', Date.now());
-  if (state.owner) { await refreshUnread(); renderChrome(); }
-  form.outerHTML = `<div class="sent">${icon('mail', 'xl')}<h2>Message sent</h2>
-    <p class="muted">Thanks, ${esc(name)}! Only ${esc(state.profile.name)} can read it.</p>
-    <a class="btn" href="#/">Back home</a></div>`;
 }
 
 // ── Owner: editor ───────────────────────────────────────────
@@ -898,6 +1049,33 @@ document.addEventListener('click', async (e) => {
           if (!$('.msg')) route({ keepScroll: true });
         }
         break;
+      case 'chat-link': {
+        const link = `${location.origin}${location.pathname}#/contact/${store.get(CHAT_KEY)}`;
+        openModal({
+          title: 'Continue on another device',
+          body: `<p class="muted" style="margin-top:0">Open this link on your other phone, tablet or computer to keep chatting there.
+            Keep it private: anyone with the link can read this chat.</p>
+            <input readonly value="${esc(link)}" aria-label="Chat link" onfocus="this.select()">
+            <div class="row end" style="margin-top:14px"><button class="btn primary" data-act="copy" data-text="${esc(link)}">Copy link</button></div>`,
+        });
+        break;
+      }
+      case 'chat-new':
+        if (await confirmDialog('Start a new chat? This browser will stop showing your current conversation (it isn’t deleted).', { ok: 'Start new chat', danger: false })) {
+          store.set(CHAT_KEY, '');
+          startGuestWatch();
+          state.guestUnread = false;
+          renderChrome();
+          route({ keepScroll: true });
+        }
+        break;
+      case 'del-thread':
+        if (await confirmDialog('Delete this whole chat, including all its messages and photos?')) {
+          await api.deleteThread(id);
+          toast('Chat deleted');
+          location.hash = '#/inbox';
+        }
+        break;
       case 'copy':
         await navigator.clipboard.writeText(el.dataset.text);
         toast('Copied');
@@ -912,7 +1090,7 @@ document.addEventListener('click', async (e) => {
 
 document.addEventListener('submit', (e) => {
   const form = e.target;
-  const handler = form.matches('.comment-form') ? submitComment : form.matches('.contact-form') ? submitMessage : null;
+  const handler = form.matches('.comment-form') ? submitComment : form.matches('.chat-start') ? startChat : null;
   if (!handler) return;
   e.preventDefault();
   handler(form).catch((err) => { console.error(err); toast(friendlyError(err), 'error'); });
@@ -947,6 +1125,8 @@ let firstAuth = true;
 api.onAuthChange(async (user) => {
   state.user = user;
   state.owner = !!(user && user.isOwner);
+  stopWatches();
+  if (state.owner) startOwnerWatch(); else startGuestWatch();
   await refreshUnread();
   renderChrome();
   renderBanner();
