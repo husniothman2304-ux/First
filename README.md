@@ -59,7 +59,7 @@ Paste the values into `FIREBASE_CONFIG` in [`assets/js/config.js`](assets/js/con
 | Put an image inside a post | **Insert image** above the text box in the editor |
 | Edit or delete something | Open it, then **Edit** / **Delete** |
 | Hide something for now | Turn off **Published** in the editor (it becomes a draft) |
-| Change your headline, name, bio, picture or banner | **About me → Edit profile**, or **Change banner** on the banner |
+| Change your headline, name, bio or picture | **About me → Edit profile** |
 | Read and reply to chats | **Inbox** icon in the top bar (the red badge counts unread ones) |
 | Remove a comment | Trash icon next to the comment (only you see it) |
 
