@@ -299,40 +299,52 @@ async function viewHome(ctx) {
   const p = state.profile;
   const motto = String(p.motto ?? '').trim();
   const nameTag = motto ? 'h2' : 'h1';
-  const hero = `
-    <section class="hero glass">
+  const STAT_LABEL = { project: 'Projects', note: 'Course', photo: 'Photos', blog: 'Lifestyle' };
+  const readout = `
       <div class="readout" aria-hidden="true">
         <span class="live"></span><span>Airborne</span><span class="sep">/</span>
         <span>Alt <b data-count="85000">0</b> ft</span><span class="sep">/</span>
         <span>Mach <b data-count="3.3" data-dec="1">0.0</b></span><span class="sep">/</span>
         <span>Log <b data-count="${items.length}">0</b> entries</span>
+      </div>`;
+
+  // 1) Poster headline
+  const poster = motto ? `
+    <section class="hero glass">
+      ${readout}
+      <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
+        .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
+      <div class="burn" aria-hidden="true"></div>
+    </section>` : '';
+
+  // 2) Profile card, TikTok-style: banner across the top, everything centred
+  const profile = `
+    <section class="profile-card glass hero-fade">
+      <div class="banner-wrap">
+        ${bannerHTML(p)}
+        ${state.owner ? `<button class="btn sm banner-edit" data-act="profile">${icon('photos')} ${hasImg(p.bannerUrl) ? 'Change banner' : 'Add banner'}</button>` : ''}
       </div>
-      ${motto ? `
-        <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
-          .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
-        <div class="burn" aria-hidden="true"></div>` : '<div style="height:18px"></div>'}
-      <div class="profile hero-fade">
-        <div class="banner-wrap">
-          ${bannerHTML(p)}
-          ${state.owner ? `<button class="btn sm banner-edit" data-act="profile">${icon('photos')} ${hasImg(p.bannerUrl) ? 'Change banner' : 'Add banner'}</button>` : ''}
+      <div class="profile-head">
+        ${avatarHTML(p, 'lg')}
+        <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
+        ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
+        ${motto ? '' : readout}
+        <div class="stats">
+          ${SECTIONS.map((s) => `
+            <a class="stat" href="#/${s.key}">
+              <b data-count="${items.filter((i) => i.type === s.type).length}">0</b>
+              <span>${STAT_LABEL[s.type] || s.label}</span>
+            </a>`).join('')}
         </div>
-        <div class="profile-id">
-          ${avatarHTML(p, 'lg')}
-          <div class="profile-names">
-            <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
-            ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
-          </div>
+        <div class="row profile-actions">
+          <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
+          <a class="btn" href="#/projects">See my projects</a>
+          ${state.owner ? `<button class="btn" data-act="profile">${icon('edit')} Edit profile</button>` : ''}
         </div>
-        <div class="hero-text">
-          ${p.bio ? `<div class="prose">${md(p.bio)}</div>` : ''}
-          <div class="row">
-            <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
-            <a class="btn" href="#/projects">See my projects</a>
-            ${state.owner ? `<button class="btn" data-act="profile">${icon('edit')} Edit profile</button>` : ''}
-          </div>
-        </div>
+        ${p.bio ? `<div class="prose profile-bio">${md(p.bio)}</div>` : ''}
       </div>
     </section>`;
+  const hero = poster + profile;
 
   const blocks = SECTIONS.map((s) => {
     const list = items.filter((i) => i.type === s.type);

@@ -1234,17 +1234,35 @@ label .muted { font-weight: 450; }
 }
 .banner-edit:hover { background: rgba(20, 18, 16, 0.75); }
 
-.profile-id {
+.profile-card { padding: 0; overflow: hidden; }
+.profile-card .pbanner { border-radius: 0; aspect-ratio: 3 / 1; max-height: 340px; box-shadow: none; }
+.profile-card .banner-edit { top: 14px; right: 14px; }
+.profile-head {
   display: flex;
-  align-items: flex-end;
-  gap: 20px;
-  padding: 0 clamp(8px, 2vw, 24px);
-  position: relative;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 clamp(18px, 4vw, 40px) clamp(24px, 4vw, 36px);
 }
-.profile-id .avatar.lg { margin-top: -60px; border: 5px solid var(--paper); box-shadow: var(--shadow); flex: none; }
-.profile-names { padding-bottom: 6px; min-width: 0; }
-.profile-names .tagline { margin: 6px 0 0; }
-.profile .hero-text { padding: 18px clamp(8px, 2vw, 24px) 0; }
+.profile-head .avatar.lg {
+  position: relative;
+  margin-top: -66px;
+  margin-bottom: 14px;
+  border: 5px solid var(--paper);
+  box-shadow: var(--shadow);
+}
+.profile-head .hero-name { margin: 0; }
+.profile-head .tagline { margin: 8px 0 0; }
+.profile-head .readout { justify-content: center; margin-top: 14px; }
+
+/* TikTok-style counts */
+.stats { display: flex; justify-content: center; gap: clamp(18px, 5vw, 44px); margin: 20px 0 22px; }
+.stat { display: grid; justify-items: center; gap: 2px; color: inherit; text-decoration: none; }
+.stat b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.stat:hover span { color: var(--accent); }
+.profile-actions { justify-content: center; }
+.profile-bio { max-width: 60ch; margin: 20px auto 0; }
 
 /* Editor */
 .banner-field { display: grid; gap: 8px; }
@@ -1269,9 +1287,11 @@ label .muted { font-weight: 450; }
 .inline-select select { width: auto; flex: none; flex-basis: auto; padding: 6px 10px; border-radius: 10px; font-size: 14px; }
 
 @media (max-width: 760px) {
-  .pbanner { aspect-ratio: 2.4 / 1; border-radius: 16px; }
-  .profile-id { flex-direction: column; align-items: flex-start; gap: 10px; padding: 0 6px; }
-  .profile-names { padding-bottom: 0; }
-  .profile-id .avatar.lg { margin-top: -48px; border-width: 4px; }
-  .profile .hero-text { padding: 14px 6px 0; }
+  .profile-card .pbanner { aspect-ratio: 2.2 / 1; }
+  .profile-head .avatar.lg { margin-top: -52px; border-width: 4px; }
+  .stats { gap: 22px; margin: 16px 0 18px; }
+  .stat b { font-size: 19px; }
+  .stat span { font-size: 12px; }
+  .profile-bio { font-size: 15.5px; }
 }
+.hero .burn { margin-bottom: 4px; }
