@@ -9,12 +9,12 @@
 //    in your own browser, so you can try it out before going live.
 //    These values are not secrets. What protects your data is firestore.rules.
 export const FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
+  apiKey: "AIzaSyA8qpIk4JgX-XYOAixT1rn677l2zEb7mn8",
+  authDomain: "mywebsite-37148.firebaseapp.com",
+  projectId: "mywebsite-37148",
+  storageBucket: "mywebsite-37148.firebasestorage.app",
+  messagingSenderId: "258851237546",
+  appId: "1:258851237546:web:ecbbaa000228a8334bead3",
 };
 
 // 2. OWNER
