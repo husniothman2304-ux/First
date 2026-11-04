@@ -1,5 +1,6 @@
 import { loadBackend } from './backend.js';
 import { mountChat } from './chat.js';
+import { blueprintHTML, playBlueprints } from './blueprint.js';
 import { DEFAULT_PROFILE } from './config.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
@@ -341,7 +342,10 @@ async function viewHome(ctx) {
       </section>`;
   }).join('');
 
-  if (render(ctx, hero + blocks)) countUp(ctx.view);
+  if (render(ctx, hero + blueprintHTML(p.name) + blocks)) {
+    countUp(ctx.view);
+    playBlueprints(ctx.view);
+  }
 }
 
 // Splits the motto into two lines of similar length for the poster headline.
