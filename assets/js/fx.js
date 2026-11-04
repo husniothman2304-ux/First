@@ -2,7 +2,6 @@
 //  - a thin scroll-progress line at the top of the screen
 //  - a spotlight + glowing edge that follows the pointer over cards
 //  - main buttons that lean slightly toward the pointer
-//  - the hero turbine tilting in 3D with the pointer
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const finePointer = window.matchMedia('(pointer: fine)').matches;
 
@@ -40,17 +39,6 @@ if (finePointer && !reduceMotion) {
       const dx = (e.clientX - (r.left + r.width / 2)) * 0.18;
       const dy = (e.clientY - (r.top + r.height / 2)) * 0.28;
       btn.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
-    }
-
-    // Turbine tilt (only while the pointer is over the hero)
-    const hero = e.target.closest('.hero-pro');
-    const turbine = hero && hero.querySelector('.turbine');
-    if (turbine) {
-      const r = hero.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5;
-      const y = (e.clientY - r.top) / r.height - 0.5;
-      turbine.style.setProperty('--ry', `${(-16 + x * 26).toFixed(1)}deg`);
-      turbine.style.setProperty('--rx', `${(6 - y * 18).toFixed(1)}deg`);
     }
   }, { passive: true });
 

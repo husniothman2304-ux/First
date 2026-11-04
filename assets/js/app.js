@@ -296,37 +296,30 @@ async function viewHome(ctx) {
   const motto = String(p.motto ?? '').trim();
   const nameTag = motto ? 'h2' : 'h1';
   const hero = `
-    <section class="hero hero-pro glass">
-      <div class="hero-spot" aria-hidden="true"></div>
-      <div class="hero-grid">
-        <div class="hero-copy">
-          <div class="readout" aria-hidden="true">
-            <span class="live"></span><span>Airborne</span><span class="sep">/</span>
-            <span>Alt <b data-count="85000">0</b> ft</span><span class="sep">/</span>
-            <span>Mach <b data-count="3.3" data-dec="1">0.0</b></span><span class="sep">/</span>
-            <span>Log <b data-count="${items.length}">0</b> entries</span>
-          </div>
-          ${motto ? `
-            <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
-              .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
-            <div class="burn" aria-hidden="true"></div>` : '<div style="height:18px"></div>'}
-          <div class="hero-body hero-fade">
-            ${avatarHTML(p, 'lg')}
-            <div class="hero-text">
-              <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
-              ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
-              ${p.bio ? `<div class="prose">${md(p.bio)}</div>` : ''}
-              <div class="row">
-                <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
-                <a class="btn" href="#/projects">See my projects</a>
-                ${state.owner ? `<button class="btn" data-act="profile">${icon('edit')} Edit profile</button>` : ''}
-              </div>
-            </div>
+    <section class="hero glass">
+      <div class="readout" aria-hidden="true">
+        <span class="live"></span><span>Airborne</span><span class="sep">/</span>
+        <span>Alt <b data-count="85000">0</b> ft</span><span class="sep">/</span>
+        <span>Mach <b data-count="3.3" data-dec="1">0.0</b></span><span class="sep">/</span>
+        <span>Log <b data-count="${items.length}">0</b> entries</span>
+      </div>
+      ${motto ? `
+        <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
+          .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
+        <div class="burn" aria-hidden="true"></div>` : '<div style="height:18px"></div>'}
+      <div class="hero-body hero-fade">
+        ${avatarHTML(p, 'lg')}
+        <div class="hero-text">
+          <${nameTag} class="hero-name">${esc(p.name)}</${nameTag}>
+          ${p.tagline ? `<p class="tagline">${esc(p.tagline)}</p>` : ''}
+          ${p.bio ? `<div class="prose">${md(p.bio)}</div>` : ''}
+          <div class="row">
+            <a class="btn primary" href="#/contact">${icon('mail')} Message me</a>
+            <a class="btn" href="#/projects">See my projects</a>
+            ${state.owner ? `<button class="btn" data-act="profile">${icon('edit')} Edit profile</button>` : ''}
           </div>
         </div>
-        <div class="hero-visual hero-fade" aria-hidden="true">${turbineHTML()}</div>
       </div>
-      <div class="scroll-cue" aria-hidden="true"><span>Scroll</span><i></i></div>
     </section>`;
 
   const EYEBROW = { project: 'Things I build', note: "What I'm learning", photo: 'Photo dump', blog: 'Life outside the workshop' };
@@ -349,59 +342,6 @@ async function viewHome(ctx) {
   }).join('');
 
   if (render(ctx, hero + blocks)) countUp(ctx.view);
-}
-
-// The hero graphic: a jet-engine turbine seen from the front, built from SVG
-// layers stacked in 3D (casing, afterburner glow, spinning fan, spinner).
-function turbineHTML() {
-  const blades = Array.from({ length: 22 }, (_, i) =>
-    `<path d="M0-40C17-78 31-118 16-151L-6-152C5-118-4-78-12-40Z" transform="rotate(${(i * 360 / 22).toFixed(2)})"/>`).join('');
-  return `
-    <div class="turbine-float">
-      <div class="turbine">
-        <div class="tb-glow"></div>
-        <svg class="tb-layer tb-ring" viewBox="-200 -200 400 400">
-          <defs>
-            <linearGradient id="tbMetal" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#9a9184"/><stop offset=".42" stop-color="#2b2824"/>
-              <stop offset=".68" stop-color="#6a635a"/><stop offset="1" stop-color="#181614"/>
-            </linearGradient>
-            <radialGradient id="tbInner"><stop offset=".72" stop-color="#0d0c0b"/><stop offset="1" stop-color="#2d2a26"/></radialGradient>
-          </defs>
-          <circle r="184" fill="none" stroke="url(#tbMetal)" stroke-width="28"/>
-          <circle r="171" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1.5"/>
-          <circle r="197" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
-        </svg>
-        <svg class="tb-layer tb-disc" viewBox="-200 -200 400 400"><circle r="170" fill="url(#tbInner)"/></svg>
-        <svg class="tb-layer tb-core" viewBox="-200 -200 400 400">
-          <defs>
-            <radialGradient id="tbFire">
-              <stop offset="0" stop-color="#fff4d6"/><stop offset=".25" stop-color="#ffb04a"/>
-              <stop offset=".6" stop-color="#d63b1f" stop-opacity=".85"/><stop offset="1" stop-color="#d63b1f" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <circle r="160" fill="url(#tbFire)"/>
-        </svg>
-        <svg class="tb-layer tb-fan" viewBox="-200 -200 400 400">
-          <defs>
-            <linearGradient id="tbBlade" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#3b3732"/><stop offset=".55" stop-color="#c2b8aa"/><stop offset="1" stop-color="#26221e"/>
-            </linearGradient>
-          </defs>
-          <g fill="url(#tbBlade)" stroke="rgba(0,0,0,.4)" stroke-width=".8">${blades}</g>
-        </svg>
-        <svg class="tb-layer tb-hub" viewBox="-200 -200 400 400">
-          <defs>
-            <radialGradient id="tbHub" cx=".34" cy=".3">
-              <stop offset="0" stop-color="#e2d9cc"/><stop offset=".5" stop-color="#5a544c"/><stop offset="1" stop-color="#141210"/>
-            </radialGradient>
-          </defs>
-          <circle r="46" fill="url(#tbHub)"/>
-          <path d="M2 -2C12-16 30-12 32 4C34 22 15 35-5 31" fill="none" stroke="#efe9df" stroke-width="4" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="tb-floor"></div>
-    </div>`;
 }
 
 // Splits the motto into two lines of similar length for the poster headline.
