@@ -55,7 +55,7 @@ Paste the values into `FIREBASE_CONFIG` in [`assets/js/config.js`](assets/js/con
 | You want to… | Do this |
 | --- | --- |
 | Add a project, course note or lifestyle post | **+** in the top bar, or **New …** on that section's page |
-| Upload photos | **Dump → Upload photos** (pick several at once) |
+| Post a photo dump | **Dump → Upload photos**: pick photos, add a title and description, then **Post dump** |
 | Put an image inside a post | **Insert image** above the text box in the editor |
 | Edit or delete something | Open it, then **Edit** / **Delete** |
 | Hide something for now | Turn off **Published** in the editor (it becomes a draft) |

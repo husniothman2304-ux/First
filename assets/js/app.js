@@ -77,7 +77,7 @@ function hiresAttr(i) {
 }
 
 function coverHTML(i) {
-  const thumb = i.thumbUrl || i.imageUrl;
+  const thumb = i.thumbUrl || i.mediumUrl || i.imageUrl;
   if (hasImg(thumb)) return `<div class="cover"><img ${imgSrc(thumb)}${hiresAttr(i)} alt="" loading="lazy"></div>`;
   const letter = (i.title || '?').trim().charAt(0).toUpperCase();
   return `<div class="cover placeholder" style="--h:${hue(i.id)}"><span>${esc(letter)}</span></div>`;
@@ -162,7 +162,8 @@ const noteRow = (i) => `
 
 const photoTile = (i) => `
   <a class="photo" href="${itemHref(i)}">
-    <img ${imgSrc(i.thumbUrl || i.imageUrl)}${hiresAttr(i)} alt="${esc(i.title || 'Photo')}" loading="lazy">
+    <img ${imgSrc(i.thumbUrl || i.mediumUrl || i.imageUrl)}${hiresAttr(i)} alt="${esc(i.title || 'Photo')}" loading="lazy">
+    ${(i.photos || []).length > 1 ? `<span class="count-badge" aria-label="${i.photos.length} photos">${icon('photos')} ${i.photos.length}</span>` : ''}
     ${i.title ? `<span class="caption">${esc(i.title)}</span>` : ''}
     ${i.published ? '' : '<span class="pill draft corner">Draft</span>'}
   </a>`;
@@ -399,6 +400,20 @@ async function viewSection(ctx, s) {
   }));
 }
 
+// The photos of a dump on its own page: one big photo, or a grid for several.
+function dumpPhotosHTML(item) {
+  const photos = photoList(item);
+  if (!photos.length) return '';
+  const alt = esc(item.title || 'Photo');
+  if (photos.length === 1) {
+    return `<figure class="photo-full"><img ${imgSrc(photos[0].url)} alt="${alt}"></figure>`;
+  }
+  return `<div class="dump-photos">${photos.map((ph, i) => `
+    <button type="button" class="dump-ph" data-act="view-photo" data-full="${esc(ph.url)}" aria-label="View photo ${i + 1} of ${photos.length}">
+      <img ${imgSrc(ph.mediumUrl || ph.url)} alt="${alt} (${i + 1} of ${photos.length})" loading="lazy">
+    </button>`).join('')}</div>`;
+}
+
 async function viewItem(ctx, id) {
   const item = await api.getItem(id);
   // Hide drafts, and old blog posts/photos (those sections were removed), from visitors.
@@ -419,9 +434,7 @@ async function viewItem(ctx, id) {
           <button class="btn sm danger" data-act="delete" data-id="${esc(item.id)}">${icon('trash')} Delete</button>
         </div>` : ''}
       </div>
-      ${img ? (isPhoto
-        ? `<figure class="photo-full"><img ${img} alt="${esc(item.title || 'Photo')}"></figure>`
-        : `<div class="article-cover"><img ${img} alt=""></div>`) : ''}
+      ${isPhoto ? dumpPhotosHTML(item) : (img ? `<div class="article-cover"><img ${img} alt=""></div>` : '')}
       <div class="meta"><time>${fmtDate(item.createdAt)}</time> ${draftBadge(item)}</div>
       ${item.title ? `<h1>${esc(item.title)}</h1>` : ''}
       ${item.summary ? `<p class="lead">${esc(item.summary)}</p>` : ''}
@@ -804,6 +817,7 @@ function openTypePicker() {
 }
 
 function openEditor(type, item = null) {
+  if (type === 'photo') return openDumpEditor(item);
   const s = byType[type];
   const has = {
     summary: type === 'project' || type === 'blog',
@@ -979,39 +993,169 @@ function openEditor(type, item = null) {
   });
 }
 
-function uploadPhotos() {
+// ── Photo dumps ─────────────────────────────────────────────
+// A dump is one post with one or more photos, a title and a description.
+// Every photo keeps its full and medium versions in the database; only the
+// cover (the first photo) also keeps a tiny inline preview for the gallery tile.
+const MAX_DUMP_PHOTOS = 20;
+
+function photoList(item) {
+  if (Array.isArray(item.photos) && item.photos.length) return item.photos;
+  return hasImg(item.imageUrl)
+    ? [{ url: item.imageUrl, thumbUrl: item.thumbUrl || '', mediumUrl: item.mediumUrl || '', path: item.imagePath || '', mediumPath: item.mediumPath || '' }]
+    : [];
+}
+
+function pickPhotos(cb) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
   input.multiple = true;
-  input.addEventListener('change', async () => {
-    const files = [...input.files];
-    if (!files.length) return;
-    const t = toast(`Uploading 0 of ${files.length}…`, 'info', 0);
-    let done = 0;
-    let failed = 0;
-    for (const f of files) {
-      try {
-        const up = await api.uploadImage(await resizeImage(f, 2400, 0.95), { medium: true });
-        await api.saveItem(null, {
-          type: 'photo', title: '', summary: '', link: '', tags: [], body: '',
-          published: true, imageUrl: up.url, imagePath: up.path, thumbUrl: up.thumbUrl || '',
-          mediumUrl: up.mediumUrl || '', mediumPath: up.mediumPath || '',
-        });
-        done++;
-      } catch (e) {
-        console.error(e);
-        failed++;
-      }
-      t.update(`Uploading ${done + failed} of ${files.length}…`);
-    }
-    t.close();
-    if (failed) toast(`${done} uploaded, ${failed} failed`, 'error');
-    else toast(`${done} photo${done > 1 ? 's' : ''} uploaded`);
-    if (location.hash === '#/dump') route({ keepScroll: true });
-    else location.hash = '#/dump';
-  });
+  input.addEventListener('change', () => { if (input.files.length) cb([...input.files]); });
   input.click();
+}
+
+function uploadPhotos() {
+  pickPhotos((files) => openDumpEditor(null, files));
+}
+
+function openDumpEditor(item = null, initialFiles = []) {
+  // Each entry is a photo already in the dump ("old") or a newly picked file ("new").
+  const entries = item ? photoList(item).map((photo) => ({ kind: 'old', photo })) : [];
+  const addFiles = (files) => {
+    for (const f of files) {
+      if (entries.length >= MAX_DUMP_PHOTOS) { toast(`A dump can have up to ${MAX_DUMP_PHOTOS} photos.`, 'error'); break; }
+      if (!/^image\//.test(f.type)) continue;
+      entries.push({ kind: 'new', file: f, preview: URL.createObjectURL(f) });
+    }
+  };
+  addFiles(initialFiles);
+  const it = item || { title: '', body: '', published: true };
+  const submitLabel = item ? 'Save changes' : 'Post dump';
+  let busy = false;
+
+  openModal({
+    title: item ? 'Edit dump' : 'New dump',
+    wide: true,
+    locked: true,
+    body: `
+      <form class="dump-form stack" novalidate>
+        <div class="dump-previews"></div>
+        <p class="muted small dump-hint">The first photo is the cover (tap ★ on another photo to make it the cover). Up to ${MAX_DUMP_PHOTOS} photos.</p>
+        <label>Title <span class="muted">(optional)</span>
+          <input name="title" maxlength="140" placeholder="e.g. Weekend at the flying field" value="${esc(it.title || '')}"></label>
+        <label>Description <span class="muted">(optional)</span>
+          <textarea name="body" rows="4" placeholder="What's this dump about?">${esc(it.body || '')}</textarea></label>
+        <label class="switch">
+          <input type="checkbox" name="published" ${it.published ? 'checked' : ''}>
+          <span class="track"></span>
+          <span>Published <span class="muted">· turn off to keep it as a private draft</span></span>
+        </label>
+        <div class="row end">
+          <button type="button" class="btn" data-x="cancel">Cancel</button>
+          <button type="submit" class="btn primary">${submitLabel}</button>
+        </div>
+      </form>`,
+    onMount(el, close) {
+      const form = $('form', el);
+      const grid = $('.dump-previews', el);
+      const submit = $('[type=submit]', form);
+
+      const draw = () => {
+        grid.innerHTML = entries.map((e, i) => `
+          <div class="dp">
+            ${e.kind === 'new'
+              ? `<img src="${esc(e.preview)}" alt="">`
+              : `<img ${imgSrc(e.photo.thumbUrl || e.photo.mediumUrl || e.photo.url)} alt="">`}
+            ${i === 0 ? '<span class="dp-cover">Cover</span>' : `<button type="button" class="dp-star" data-i="${i}" title="Make this the cover" aria-label="Make this the cover">★</button>`}
+            <button type="button" class="dp-x" data-i="${i}" title="Remove" aria-label="Remove photo">${icon('x')}</button>
+          </div>`).join('')
+          + (entries.length < MAX_DUMP_PHOTOS
+            ? `<label class="dp dp-add">${icon('plus')}<span>Add photos</span><input type="file" accept="image/*" multiple hidden></label>`
+            : '');
+        const input = $('.dp-add input', grid);
+        if (input) input.addEventListener('change', () => { addFiles([...input.files]); draw(); });
+      };
+      draw();
+
+      grid.addEventListener('click', (e) => {
+        if (busy) return;
+        const x = e.target.closest('.dp-x');
+        const star = e.target.closest('.dp-star');
+        if (x) {
+          const [gone] = entries.splice(Number(x.dataset.i), 1);
+          if (gone && gone.preview) URL.revokeObjectURL(gone.preview);
+          draw();
+        } else if (star) {
+          const [moved] = entries.splice(Number(star.dataset.i), 1);
+          entries.unshift(moved);
+          draw();
+        }
+      });
+
+      $('[data-x=cancel]', el).addEventListener('click', () => { if (!busy) close(); });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (busy) return;
+        if (!entries.length) return toast('Add at least one photo.', 'error');
+        busy = true;
+        submit.disabled = true;
+        form.classList.add('busy');
+        const newCount = entries.filter((x) => x.kind === 'new').length;
+        let n = 0;
+        let failed = 0;
+        try {
+          const photos = [];
+          for (const entry of entries) {
+            if (entry.kind === 'old') { photos.push(entry.photo); continue; }
+            n++;
+            submit.textContent = `Uploading ${n} of ${newCount}…`;
+            try {
+              const up = await api.uploadImage(await resizeImage(entry.file, 2400, 0.95), { medium: true });
+              photos.push({ url: up.url, thumbUrl: up.thumbUrl || '', mediumUrl: up.mediumUrl || '', path: up.path, mediumPath: up.mediumPath || '' });
+            } catch (err) {
+              console.error(err);
+              failed++;
+            }
+          }
+          if (!photos.length) throw new Error("None of the photos could be uploaded. Try JPG or PNG photos.");
+          // Only the cover keeps its tiny inline preview, so the post stays small.
+          const slim = photos.map((ph, i) => ({ ...ph, thumbUrl: i === 0 ? (ph.thumbUrl || '') : '' }));
+          const cover = slim[0];
+          submit.textContent = 'Saving…';
+          const id = await api.saveItem(item ? item.id : null, {
+            type: 'photo', title: form.title.value.trim(), summary: '', link: '', tags: [],
+            body: form.body.value, published: form.published.checked,
+            imageUrl: cover.url, thumbUrl: cover.thumbUrl, mediumUrl: cover.mediumUrl,
+            imagePath: cover.path, mediumPath: cover.mediumPath, photos: slim,
+          });
+          // Delete photos that were taken out of the dump.
+          if (item) {
+            const keep = new Set(slim.flatMap((p) => [p.path, p.mediumPath]));
+            photoList(item).forEach((p) => [p.path, p.mediumPath].forEach((path) => {
+              if (path && !keep.has(path)) api.deleteUpload(path).catch(() => {});
+            }));
+          }
+          entries.forEach((x) => x.preview && URL.revokeObjectURL(x.preview));
+          busy = false;
+          close();
+          if (failed) toast(`Posted, but ${failed} photo${failed > 1 ? 's' : ''} couldn't be uploaded.`, 'error');
+          else toast(item ? 'Dump saved' : 'Dump posted');
+          const target = `#/p/${encodeURIComponent(id)}`;
+          if (location.hash === target) route({ keepScroll: true });
+          else location.hash = target;
+        } catch (err) {
+          console.error(err);
+          toast(friendlyError(err), 'error');
+          busy = false;
+          submit.disabled = false;
+          submit.textContent = submitLabel;
+          form.classList.remove('busy');
+        }
+      });
+    },
+  });
 }
 
 function openProfileEditor() {
@@ -1114,6 +1258,9 @@ document.addEventListener('click', async (e) => {
       case 'new': openTypePicker(); break;
       case 'new-type': openEditor(el.dataset.type); break;
       case 'upload-photos': uploadPhotos(); break;
+      case 'view-photo':
+        openModal({ title: 'Photo', wide: true, body: `<img class="photo-view" ${imgSrc(el.dataset.full)} alt="Photo">` });
+        break;
       case 'profile': openProfileEditor(); break;
       case 'edit': {
         const it = await api.getItem(id);

@@ -112,6 +112,10 @@ export async function deleteItem(id) {
   if (!item) return;
   // Also remove the cover image and any images placed inside the text.
   const paths = new Set([item.imagePath, item.mediumPath].filter(Boolean));
+  for (const ph of Array.isArray(item.photos) ? item.photos : []) {
+    if (ph.path) paths.add(ph.path);
+    if (ph.mediumPath) paths.add(ph.mediumPath);
+  }
   for (const m of String(item.body || '').matchAll(/#fsimg-([A-Za-z0-9]{1,40})/g)) paths.add(`images/${m[1]}`);
   await Promise.all([...paths].map((p) => deleteUpload(p).catch(() => {})));
 }
