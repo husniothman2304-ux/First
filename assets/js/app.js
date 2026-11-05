@@ -1,5 +1,7 @@
 import { loadBackend } from './backend.js';
 import { mountChat } from './chat.js';
+import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
+import { CAL_EVENTS } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
@@ -197,6 +199,7 @@ function renderChrome() {
   const links = [
     { key: '', label: 'About me', icon: 'user' },
     ...SECTIONS.map((s) => ({ key: s.key, label: s.label, icon: s.icon })),
+    { key: 'calendar', label: 'Calendar', icon: 'calendar' },
     { key: 'contact', label: 'Contact', icon: 'mail' },
   ];
   const dot = (l) => (l.key === 'contact' && state.guestUnread ? '<span class="dot-new" aria-label="New reply"></span>' : '');
@@ -312,6 +315,7 @@ async function route({ keepScroll = false } = {}) {
     if (!seg) await viewHome(ctx);
     else if (byKey[seg]) await viewSection(ctx, byKey[seg]);
     else if (seg === 'p' && arg) await viewItem(ctx, decodeURIComponent(arg));
+    else if (seg === 'calendar') await viewCalendar(ctx);
     else if (seg === 'contact') await viewContact(ctx, arg);
     else if (seg === 'inbox') await viewInbox(ctx, decodeURIComponent(arg));
     else viewNotFound(ctx);
@@ -775,6 +779,102 @@ function stopWatches() {
   if (guestWatch) { guestWatch(); guestWatch = null; }
   state.unreadThreads = 0;
   state.guestUnread = false;
+}
+
+// ── Calendar ────────────────────────────────────────────────
+// Fixed university dates come from calendar-data.js; the owner's own events
+// are stored as items with type "event" (date in `start`, optional `end`).
+let calEvents = [];
+let calFocus = ''; // date to show after adding or editing an event
+const toCalEvent = (i) => ({
+  id: i.id, type: i.eventType || 'personal', title: i.title, start: i.start, end: i.end || '',
+  time: i.time || '', note: i.body || '', private: !i.published,
+});
+
+async function viewCalendar(ctx) {
+  const mine = await api.listItems('event', { includeDrafts: state.owner }).catch(() => []);
+  if (ctx.stale()) return;
+  calEvents = [...CAL_EVENTS, ...mine.filter((i) => /^\d{4}-\d\d-\d\d$/.test(i.start || '')).map(toCalEvent)];
+  const ok = render(ctx, `
+    <header class="page-head glass">
+      <div>
+        <h1>${icon('calendar')} Calendar</h1>
+        <p class="muted">Session 2026/2027 · UTM Johor Bahru · tests, holidays and breaks.</p>
+      </div>
+      <div class="row">
+        <button class="btn" data-act="export-cal" title="Download for Apple or Google Calendar">${icon('calendar')} Add to my calendar</button>
+        ${state.owner ? `<button class="btn primary" data-act="new-event">${icon('plus')} New event</button>` : ''}
+      </div>
+    </header>
+    <div class="cal"></div>`);
+  if (ok) mountCalendar($('.cal', ctx.view), { events: calEvents, owner: state.owner, focus: calFocus });
+  calFocus = '';
+}
+
+function openEventEditor(item = null) {
+  const it = { title: '', start: '', end: '', time: '', body: '', eventType: 'personal', published: true, ...(item || {}) };
+  openModal({
+    title: item ? 'Edit event' : 'New event',
+    locked: true,
+    body: `
+      <form class="stack">
+        <label>Title<input name="title" maxlength="120" required value="${esc(it.title)}" placeholder="e.g. Group meeting, flying session"></label>
+        <div class="row two">
+          <label>Date<input name="start" type="date" required value="${esc(it.start)}"></label>
+          <label>Until <span class="muted">(optional)</span><input name="end" type="date" value="${esc(it.end)}"></label>
+        </div>
+        <div class="row two">
+          <label>Time <span class="muted">(optional)</span><input name="time" maxlength="40" value="${esc(it.time)}" placeholder="e.g. 3.00 – 5.00 PM"></label>
+          <label>Type<select name="eventType">
+            ${['personal', 'test', 'holiday', 'break'].map((t) => `<option value="${t}" ${it.eventType === t ? 'selected' : ''}>${CAL_TYPES[t].label}</option>`).join('')}
+          </select></label>
+        </div>
+        <label>Note <span class="muted">(optional)</span><textarea name="body" rows="3">${esc(it.body)}</textarea></label>
+        <label class="switch">
+          <input type="checkbox" name="published" ${it.published ? 'checked' : ''}>
+          <span class="track"></span>
+          <span>Visible to visitors <span class="muted">· turn off to keep it private</span></span>
+        </label>
+        <div class="row between">
+          ${item ? `<button type="button" class="btn danger" data-x="delete">${icon('trash')} Delete</button>` : '<span></span>'}
+          <div class="row"><button type="button" class="btn" data-x="cancel">Cancel</button>
+          <button type="submit" class="btn primary">Save</button></div>
+        </div>
+      </form>`,
+    onMount(el, close) {
+      const form = $('form', el);
+      $('[data-x=cancel]', el).addEventListener('click', close);
+      const del = $('[data-x=delete]', el);
+      if (del) del.addEventListener('click', async () => {
+        if (!(await confirmDialog('Delete this event?'))) return;
+        try { await api.deleteItem(item.id); close(); toast('Event deleted'); route({ keepScroll: true }); } catch (err) { toast(friendlyError(err), 'error'); }
+      });
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = form.title.value.trim();
+        const start = form.start.value;
+        let end = form.end.value;
+        if (!title || !start) return toast('Please add a title and a date.', 'error');
+        if (end && end < start) return toast('"Until" must be on or after the date.', 'error');
+        if (end === start) end = '';
+        await withBusy($('[type=submit]', form), 'Saving…', async () => {
+          try {
+            await api.saveItem(item ? item.id : null, {
+              type: 'event', title, start, end, time: form.time.value.trim(), body: form.body.value.trim(),
+              eventType: form.eventType.value, published: form.published.checked,
+              summary: '', link: '', tags: [], imageUrl: '', imagePath: '',
+            });
+            close();
+            calFocus = start;
+            toast(item ? 'Event saved' : 'Event added');
+            route({ keepScroll: true });
+          } catch (err) {
+            toast(friendlyError(err), 'error');
+          }
+        });
+      });
+    },
+  });
 }
 
 function viewNotFound(ctx) {
@@ -1334,6 +1434,16 @@ document.addEventListener('click', async (e) => {
           location.hash = '#/inbox';
         }
         break;
+      case 'export-cal':
+        downloadIcs(calEvents.length ? calEvents : CAL_EVENTS);
+        toast('Calendar file downloaded. Open it to add the dates to your calendar.');
+        break;
+      case 'new-event': openEventEditor(); break;
+      case 'edit-event': {
+        const it = await api.getItem(id);
+        if (it) openEventEditor(it);
+        break;
+      }
       case 'copy':
         await navigator.clipboard.writeText(el.dataset.text);
         toast('Copied');

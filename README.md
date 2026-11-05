@@ -1,6 +1,6 @@
 # My personal website
 
-A personal site with an **About me** page, **Projects**, **Course** notes, a photo **Dump**, **Lifestyle** posts and a private **Contact** chat, with a black liquid-glass design. It is plain HTML, CSS and JavaScript with no build step.
+A personal site with an **About me** page, **Projects**, **Course** notes, a photo **Dump**, **Lifestyle** posts, a **Calendar** and a private **Contact** chat, with a black liquid-glass design. It is plain HTML, CSS and JavaScript with no build step.
 
 - **Only you can edit.** You sign in with Google to add, edit, delete and upload. Firebase security rules enforce this on the server, so hiding the buttons is not what keeps others out.
 - **Visitors can comment** on any published project, course note, photo or lifestyle post.
@@ -60,6 +60,8 @@ Paste the values into `FIREBASE_CONFIG` in [`assets/js/config.js`](assets/js/con
 | Edit or delete something | Open it, then **Edit** / **Delete** |
 | Hide something for now | Turn off **Published** in the editor (it becomes a draft) |
 | Change your headline, name, bio or picture | **About me → Edit profile** |
+| Add your own calendar event | **Calendar → New event** (turn off "Visible to visitors" to keep it private) |
+| Change the university dates or tests | Edit `assets/js/calendar-data.js` |
 | Read and reply to chats | **Inbox** icon in the top bar (the red badge counts unread ones) |
 | Remove a comment | Trash icon next to the comment (only you see it) |
 
