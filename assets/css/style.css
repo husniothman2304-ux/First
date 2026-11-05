@@ -369,25 +369,11 @@ main { flex: 1; display: grid; gap: 28px; align-content: start; margin-top: 24px
 
 /* ── Hero ─────────────────────────────────────────────── */
 .hero { padding: clamp(24px, 5vw, 52px); overflow: hidden; }
-.readout {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  font-family: var(--mono-ui);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.readout b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.readout .sep { opacity: 0.5; }
 .live { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); animation: live 1.8s ease-out infinite; }
 @keyframes live { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
 
 .motto {
-  margin: 14px 0 0;
+  margin: 0;
   font-family: var(--display);
   font-weight: 400;
   font-size: clamp(50px, 11vw, 150px);

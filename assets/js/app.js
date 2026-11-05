@@ -297,12 +297,6 @@ async function viewHome(ctx) {
   const nameTag = motto ? 'h2' : 'h1';
   const hero = `
     <section class="hero glass">
-      <div class="readout" aria-hidden="true">
-        <span class="live"></span><span>Airborne</span><span class="sep">/</span>
-        <span>Alt <b data-count="85000">0</b> ft</span><span class="sep">/</span>
-        <span>Mach <b data-count="3.3" data-dec="1">0.0</b></span><span class="sep">/</span>
-        <span>Log <b data-count="${items.length}">0</b> entries</span>
-      </div>
       ${motto ? `
         <h1 class="motto" aria-label="${esc(motto)}">${splitMotto(motto)
           .map((line, i) => `<span class="ml" aria-hidden="true"><span style="--d:${i}">${esc(line)}</span></span>`).join('')}</h1>
@@ -341,7 +335,7 @@ async function viewHome(ctx) {
       </section>`;
   }).join('');
 
-  if (render(ctx, hero + blocks)) countUp(ctx.view);
+  render(ctx, hero + blocks);
 }
 
 // Splits the motto into two lines of similar length for the poster headline.
@@ -357,28 +351,6 @@ function splitMotto(text) {
   return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
 }
 
-// Animates the flight readout numbers from 0 up to their value.
-function countUp(root) {
-  const els = $$('[data-count]', root);
-  const fmt = (el, v) => {
-    const dec = Number(el.dataset.dec || 0);
-    el.textContent = dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US');
-  };
-  if (reduceMotion) { els.forEach((el) => fmt(el, Number(el.dataset.count))); return; }
-  if (document.documentElement.classList.contains('intro-playing')) {
-    afterIntro(() => countUp(root));
-    return;
-  }
-  const start = performance.now() + 250;
-  const dur = 1800;
-  const step = (now) => {
-    const t = Math.min(1, Math.max(0, (now - start) / dur));
-    const e = 1 - Math.pow(1 - t, 3);
-    els.forEach((el) => fmt(el, Number(el.dataset.count) * e));
-    if (t < 1 && els[0] && els[0].isConnected) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
 
 async function viewSection(ctx, s) {
   const items = await api.listItems(s.type, { includeDrafts: state.owner });
