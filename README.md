@@ -1,6 +1,6 @@
 # My personal website
 
-A personal site with an **About me** page, **Projects**, **Course** notes, a photo **Dump**, **Lifestyle** posts and a private **Contact** chat, with a frosted-glass design in light and dark mode. It is plain HTML, CSS and JavaScript with no build step.
+A personal site with an **About me** page, **Projects**, **Course** notes, a photo **Dump**, **Lifestyle** posts and a private **Contact** chat, with a black liquid-glass design. It is plain HTML, CSS and JavaScript with no build step.
 
 - **Only you can edit.** You sign in with Google to add, edit, delete and upload. Firebase security rules enforce this on the server, so hiding the buttons is not what keeps others out.
 - **Visitors can comment** on any published project, course note, photo or lifestyle post.

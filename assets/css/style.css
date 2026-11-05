@@ -1544,3 +1544,156 @@ input:focus, textarea:focus, select:focus {
 /* Avatars get a fine glass ring */
 .avatar.lg { border: 4px solid rgba(255, 255, 255, 0.75); box-shadow: var(--shadow), 0 0 0 0.5px rgba(60, 40, 20, 0.12); }
 @media (prefers-color-scheme: dark) { .avatar.lg { border-color: rgba(255, 255, 255, 0.14); } }
+
+/* ══════════════════════════════════════════════════════════════
+   THEME: Liquid Chrome — black liquid glass with silver rims.
+   Always dark. Placed last so it overrides the earlier poster theme.
+   The background is a still image (assets/img/liquid-*.jpg, made by
+   tools/liquid-background.js), so nothing animates behind the glass.
+   ══════════════════════════════════════════════════════════════ */
+:root, :root:not(#x) {
+  color-scheme: dark;
+  --paper: #050506;
+  --ink: #f2f4f7;
+  --bg: #050506;
+  --text: #f2f4f7;
+  --muted: #9aa0ab;
+  --accent: #e9edf3;          /* chrome */
+  --accent-hover: #ffffff;
+  --on-accent: #0a0b0d;
+  --link: #c9d6ea;
+  --danger: #ff5f57;
+  --ok: #e9edf3;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --field: rgba(255, 255, 255, 0.05);
+  --glass: rgba(18, 19, 22, 0.42);
+  --glass-strong: rgba(22, 23, 27, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-top: rgba(40, 42, 48, 0.46);
+  --glass-bot: rgba(10, 11, 13, 0.4);
+  --glass-strong-top: rgba(40, 42, 48, 0.94);
+  --glass-strong-bot: rgba(16, 17, 20, 0.94);
+  --sheen: rgba(255, 255, 255, 0.08);
+  --rim-hi: rgba(255, 255, 255, 0.24);
+  --rim-lo: rgba(255, 255, 255, 0.06);
+  --rim-shade: rgba(0, 0, 0, 0.5);
+  --edge: rgba(255, 255, 255, 0.14);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.4), 0 12px 28px -12px rgba(0, 0, 0, 0.8), 0 36px 70px -34px rgba(0, 0, 0, 0.9);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.45), 0 22px 44px -14px rgba(0, 0, 0, 0.9), 0 50px 90px -36px rgba(0, 0, 0, 0.95);
+}
+body { background: #050506; color: var(--text); }
+a { color: var(--link); }
+::selection { background: rgba(255, 255, 255, 0.22); }
+
+/* Background: the liquid-glass artwork, a different crop per page */
+.bg { background: #050506 url("../img/liquid-wide.jpg") no-repeat; background-size: 125% auto; background-position: 30% 20%; transition: background-position 1.4s cubic-bezier(0.4, 0, 0.2, 1); }
+@media (max-aspect-ratio: 4/5) { .bg { background-image: url("../img/liquid-tall.jpg"); background-size: 140% auto; } }
+@media (min-aspect-ratio: 16/10) { .bg { background-size: 135% auto; } }
+.bg[data-scene="about"] { background-position: 30% 20%; }
+.bg[data-scene="projects"] { background-position: 85% 10%; }
+.bg[data-scene="course"] { background-position: 10% 80%; }
+.bg[data-scene="dump"] { background-position: 70% 75%; }
+.bg[data-scene="lifestyle"] { background-position: 50% 45%; }
+.bg[data-scene="contact"] { background-position: 95% 95%; }
+.paper, .grain { display: none; }
+.bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, transparent 50%, rgba(0, 0, 0, 0.55)); pointer-events: none; }
+
+/* Glass: smoky black with a silver rim */
+.glass, .glass-strong {
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--shadow), inset 1px 1px 0 var(--rim-hi), inset -1px -1px 0 var(--rim-lo), inset 0 -18px 28px -24px rgba(0, 0, 0, 0.6);
+}
+
+/* Menu highlight bubble */
+.nav-ind, .tab-ind {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+#nav-links a { color: var(--muted); }
+#nav-links a.active, #nav-links a:hover:not(.active) { color: #fff; }
+.tabbar a { color: var(--muted); }
+.tabbar a.active { color: #fff; }
+
+/* Buttons: smoked glass pills; the main one is polished chrome */
+.btn, .btn:hover {
+  color: #f2f4f7;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  border: 0.5px solid rgba(255, 255, 255, 0.16);
+}
+.btn { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 18px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.35); }
+.btn:hover { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45), 0 14px 26px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.24); }
+.btn.primary, .btn.primary:hover {
+  color: #0a0b0d;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(180deg, #ffffff 0%, #dfe3ea 45%, #b9c0cc 55%, #eef1f5 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 24px -10px rgba(0, 0, 0, 0.85), inset 0 1px 0 #fff, inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+}
+.btn.primary:hover { background: linear-gradient(180deg, #ffffff 0%, #eef1f6 45%, #cdd3dd 55%, #ffffff 100%); }
+.btn.primary::after { background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.85), transparent); }
+.btn.danger { color: var(--danger); }
+.btn.danger-solid { background: linear-gradient(180deg, #ff6a62, #e0352b); color: #fff; }
+.icon-btn { color: #f2f4f7; }
+.icon-btn:hover { background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+
+/* Fields */
+input, textarea, select {
+  color: #f2f4f7;
+  background: rgba(255, 255, 255, 0.05);
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+input:focus, textarea:focus, select:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Toggle switch: chrome instead of green */
+.track { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.14); }
+.switch input:checked + .track { background: linear-gradient(180deg, #f4f6f9, #b9c0cc); }
+.switch input:checked + .track::after { background: #0d0e10; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+
+/* Headline underline: a chrome streak instead of red */
+.burn { background: linear-gradient(90deg, #fff 0%, #c7ced9 40%, rgba(199, 206, 217, 0.4) 75%, transparent); box-shadow: 0 0 18px rgba(255, 255, 255, 0.18); }
+.motto { color: #f6f7f9; }
+
+/* Small bits */
+.pill { background: rgba(255, 255, 255, 0.12); color: #f2f4f7; }
+.pill.draft { background: rgba(255, 255, 255, 0.1); color: #c9d0db; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.25); }
+.banner.warn { border-color: rgba(255, 255, 255, 0.3); }
+.tag { color: #c6ccd6; background: rgba(255, 255, 255, 0.08); }
+.dot-new, .badge { background: #fff; color: #0a0b0d; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15); }
+.msg.unread .dot { background: #fff; }
+.avatar.initials { background: linear-gradient(180deg, #2b2e35, #0d0e11); color: #f2f4f7; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.avatar.lg { border-color: rgba(255, 255, 255, 0.16); }
+.placeholder { background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 60%), linear-gradient(160deg, #1d1f24, #07080a); }
+.placeholder span { color: #e9edf3; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2); }
+.page-head h1 .icon, .block-head h2 .icon, .comments h2 .icon, .empty .icon.xl, .pick .icon { color: #dfe4ec; }
+.more, .back { color: var(--link); }
+.icon-bubble { background: linear-gradient(180deg, #2b2e35, #0d0e11); box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.comment { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); }
+.comment.by-owner { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.22); }
+.mine .bubble { background: linear-gradient(180deg, #f4f6f9, #d4d9e1); color: #0a0b0d; }
+.sticker.label { box-shadow: inset 0 -4px 0 #c9d0db, 0 6px 16px -8px rgba(0, 0, 0, 0.6); }
+.send { background: linear-gradient(180deg, #f4f6f9, #c4cad4); color: #0a0b0d; }
+.send:hover { background: #fff; color: #0a0b0d; }
+.prose blockquote { border-left-color: rgba(255, 255, 255, 0.5); }
+.prose code, .prose pre { background: rgba(255, 255, 255, 0.07); }
+#progress { background: linear-gradient(90deg, #8d95a3, #fff); }
+.foot-mark { -webkit-text-stroke: 1px rgba(255, 255, 255, 0.14); }
+.modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+.cover-preview.empty:hover, .dp-add:hover { border-color: rgba(255, 255, 255, 0.5); color: #fff; }
+.dp-cover { background: #f2f4f7; color: #0a0b0d; }
+.card::before, .note::before, .thread::before, .pick::before { background: radial-gradient(260px circle at var(--mx, 50%) var(--my, -60%), rgba(255, 255, 255, 0.75), transparent 60%); }
+.card::after, .note::after, .thread::after, .pick::after, .photo::after { background: radial-gradient(420px circle at var(--mx, 50%) var(--my, -60%), rgba(255, 255, 255, 0.07), transparent 45%); }
+.sent .icon { color: #e9edf3; }
+
+/* Logo intro: silver instead of red */
+.intro { background: #050506; }
+.intro::after { background: none; }
+.intro-ring .sweep { stroke: #ffffff; }
+.intro-caption .live, .live { background: #fff; }
+.intro-bar span { background: #fff; }
+.intro-boom { border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 24px rgba(255, 255, 255, 0.35), inset 0 0 22px rgba(255, 255, 255, 0.2); }
