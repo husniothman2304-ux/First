@@ -221,9 +221,9 @@ function renderChrome() {
 function setNav(key) {
   state.nav = key;
   $$('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === key));
-  // Each menu page has its own background scene (see bg.js).
-  const scene = !key ? 'about' : key === 'inbox' ? 'contact' : key;
-  document.dispatchEvent(new CustomEvent('scene', { detail: scene }));
+  // Each menu page tints the paper's edge glow differently (see .bg[data-scene] in the CSS).
+  const bg = document.querySelector('.bg');
+  if (bg) bg.dataset.scene = !key ? 'about' : key === 'inbox' ? 'contact' : (key === 'p' ? bg.dataset.scene : key);
 }
 
 function renderBanner() {
