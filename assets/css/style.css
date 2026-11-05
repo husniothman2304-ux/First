@@ -1,7 +1,7 @@
 /* ──────────────────────────────────────────────────────────
    "Blackbird" theme: frosted glass panels over a vintage
    aerospace poster: aged cream paper, film grain, a red
-   light leak and flowing speed ribbons (drawn by bg.js).
+   light leak and a live wind-tunnel flow field (drawn by bg.js).
    Light and dark follow the device setting.
    ────────────────────────────────────────────────────────── */
 :root {
@@ -118,21 +118,17 @@ code { font-family: var(--mono); }
     /* aged edges */
     radial-gradient(130% 95% at 50% 45%, transparent 55%, var(--vignette) 100%);
 }
-.ribbons {
+/* Wind-tunnel flow field (drawn by bg.js on two canvases) */
+.flow {
   position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   will-change: transform;
 }
-.ribbons path { fill: none; stroke: var(--ribbon); stroke-linecap: round; }
-.ribbons .rib path {
-  stroke-dasharray: var(--len);
-  stroke-dashoffset: var(--len);
-  transition: stroke-dashoffset 2.6s cubic-bezier(0.55, 0.05, 0.2, 1) var(--delay, 0s);
-}
-.ribbons.drawn .rib path { stroke-dashoffset: 0; }
-.ribbons .trail path { stroke: var(--accent); opacity: 0.85; }
+/* The tunnel "switches on": streamlines sweep in from the left */
+#flow { clip-path: inset(0 100% 0 0); }
+#flow.on { clip-path: inset(0 0 0 0); transition: clip-path 2.2s cubic-bezier(0.55, 0.05, 0.2, 1); }
 .grain {
   position: absolute;
   inset: -50%;
@@ -1049,21 +1045,6 @@ label .muted { font-weight: 450; }
 @keyframes punch { to { transform: scale(2.8); opacity: 0; filter: blur(6px); } }
 @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
 
-/* A glowing streak that flies along the red contrail now and then */
-.ribbons .comet path {
-  stroke: var(--accent);
-  stroke-width: 3;
-  stroke-dasharray: var(--seg) var(--len);
-  stroke-dashoffset: var(--seg);
-  filter: drop-shadow(0 0 4px var(--accent));
-  opacity: 0;
-}
-.ribbons.drawn .comet path { opacity: 1; animation: comet 7s 2.6s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
-@keyframes comet {
-  0% { stroke-dashoffset: var(--seg); }
-  45%, 100% { stroke-dashoffset: calc(var(--len) * -1); }
-}
-
 /* ── Chat ─────────────────────────────────────────────── */
 .dot-new { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 .tabbar a { position: relative; }
@@ -1218,14 +1199,6 @@ label .muted { font-weight: 450; }
 .bg[data-scene="lifestyle"] { --leak-h: 42; }
 .bg[data-scene="contact"] { --leak-h: 262; }
 
-/* Leaving a page: the ribbons streak off along their own paths */
-.ribbons.drawn.leaving .rib path {
-  stroke-dashoffset: calc(var(--len) * -1);
-  transition: stroke-dashoffset 0.7s cubic-bezier(0.6, 0, 0.4, 1) 0s;
-}
-.ribbons.leaving .comet path { opacity: 0; animation: none; }
-/* Arriving on a page: a quicker draw-in than the very first one */
-.ribbons.quick .rib path { transition-duration: 1.5s; }
 
 /* ── Photo dumps ──────────────────────────────────────── */
 .photo .count-badge {
