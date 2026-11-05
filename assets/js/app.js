@@ -224,7 +224,39 @@ function setNav(key) {
   // Each menu page tints the paper's edge glow differently (see .bg[data-scene] in the CSS).
   const bg = document.querySelector('.bg');
   if (bg) bg.dataset.scene = !key ? 'about' : key === 'inbox' ? 'contact' : (key === 'p' ? bg.dataset.scene : key);
+  placeIndicators();
 }
+
+// The glass "bubble" behind the active menu item glides to the page you open.
+function placeIndicator(container, cls) {
+  if (!container) return;
+  let ind = container.querySelector(`.${cls}`);
+  if (!ind) {
+    ind = document.createElement('span');
+    ind.className = cls;
+    ind.setAttribute('aria-hidden', 'true');
+    container.prepend(ind);
+  }
+  const a = container.querySelector('a.active');
+  if (!a || !a.offsetWidth) { ind.style.opacity = '0'; return; }
+  const first = !ind.dataset.ready;
+  if (first) ind.style.transition = 'none';
+  ind.style.width = `${a.offsetWidth}px`;
+  ind.style.height = `${a.offsetHeight}px`;
+  ind.style.transform = `translate(${a.offsetLeft}px, ${a.offsetTop}px)`;
+  ind.style.opacity = '1';
+  if (first) {
+    void ind.offsetWidth; // apply the position before turning the glide on
+    ind.style.transition = '';
+    ind.dataset.ready = '1';
+  }
+}
+function placeIndicators() {
+  placeIndicator($('#nav-links'), 'nav-ind');
+  placeIndicator($('#tabbar'), 'tab-ind');
+}
+window.addEventListener('resize', debounce(placeIndicators, 100));
+if (document.fonts) document.fonts.ready.then(placeIndicators);
 
 function renderBanner() {
   let html = '';
