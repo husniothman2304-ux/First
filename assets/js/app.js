@@ -7,7 +7,7 @@ import { CAL_EVENTS } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
-  icon, toast, openModal, confirmDialog, resizeImage,
+  icon, toast, openModal, confirmDialog, resizeImage, isImageFile,
 } from './ui.js';
 
 // ── Setup ───────────────────────────────────────────────────
@@ -1175,12 +1175,32 @@ function photoList(item) {
     : [];
 }
 
+// Small previews, made one after another so a phone isn't decoding many big
+// camera photos at the same time.
+let previewQueue = Promise.resolve();
+function makePreview(file) {
+  const job = previewQueue.then(async () => URL.createObjectURL(await resizeImage(file, 360, 0.72, 0, true)));
+  previewQueue = job.catch(() => {});
+  return job;
+}
+
+// The picker input is kept in the page until a choice is made: iPhone and iPad
+// Safari can drop a detached input, so the photos you chose never arrive.
 function pickPhotos(cb) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
   input.multiple = true;
-  input.addEventListener('change', () => { if (input.files.length) cb([...input.files]); });
+  input.className = 'hp';
+  input.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(input);
+  const done = () => setTimeout(() => input.remove(), 0);
+  input.addEventListener('change', () => {
+    const files = [...input.files];
+    done();
+    if (files.length) cb(files);
+  });
+  input.addEventListener('cancel', done);
   input.click();
 }
 
@@ -1191,12 +1211,18 @@ function uploadPhotos() {
 function openDumpEditor(item = null, initialFiles = []) {
   // Each entry is a photo already in the dump ("old") or a newly picked file ("new").
   const entries = item ? photoList(item).map((photo) => ({ kind: 'old', photo })) : [];
+  let redraw = () => {};
   const addFiles = (files) => {
+    let skipped = 0;
     for (const f of files) {
       if (entries.length >= MAX_DUMP_PHOTOS) { toast(`A dump can have up to ${MAX_DUMP_PHOTOS} photos.`, 'error'); break; }
-      if (!/^image\//.test(f.type)) continue;
-      entries.push({ kind: 'new', file: f, preview: URL.createObjectURL(f) });
+      if (!isImageFile(f)) { skipped++; continue; }
+      const entry = { kind: 'new', file: f, preview: '' };
+      entries.push(entry);
+      // Small preview, made one at a time, instead of showing full-size camera photos.
+      makePreview(f).then((url) => { entry.preview = url; redraw(); }).catch(() => { entry.preview = 'error'; redraw(); });
     }
+    if (skipped) toast(`${skipped} file${skipped > 1 ? 's' : ''} skipped: not a photo.`, 'error');
   };
   addFiles(initialFiles);
   const it = item || { title: '', body: '', published: true };
@@ -1234,7 +1260,7 @@ function openDumpEditor(item = null, initialFiles = []) {
         grid.innerHTML = entries.map((e, i) => `
           <div class="dp">
             ${e.kind === 'new'
-              ? `<img src="${esc(e.preview)}" alt="">`
+              ? (e.preview && e.preview !== 'error' ? `<img src="${esc(e.preview)}" alt="">` : `<span class="dp-wait">${e.preview === 'error' ? '!' : '<span class="spinner"></span>'}</span>`)
               : `<img ${imgSrc(e.photo.thumbUrl || e.photo.mediumUrl || e.photo.url)} alt="">`}
             ${i === 0 ? '<span class="dp-cover">Cover</span>' : `<button type="button" class="dp-star" data-i="${i}" title="Make this the cover" aria-label="Make this the cover">★</button>`}
             <button type="button" class="dp-x" data-i="${i}" title="Remove" aria-label="Remove photo">${icon('x')}</button>
@@ -1243,9 +1269,10 @@ function openDumpEditor(item = null, initialFiles = []) {
             ? `<label class="dp dp-add">${icon('plus')}<span>Add photos</span><input type="file" accept="image/*" multiple hidden></label>`
             : '');
         const input = $('.dp-add input', grid);
-        if (input) input.addEventListener('change', () => { addFiles([...input.files]); draw(); });
+        if (input) input.addEventListener('change', () => { addFiles([...input.files]); input.value = ''; draw(); });
       };
       draw();
+      redraw = () => { if (grid.isConnected && !busy) draw(); };
 
       grid.addEventListener('click', (e) => {
         if (busy) return;
@@ -1274,6 +1301,7 @@ function openDumpEditor(item = null, initialFiles = []) {
         const newCount = entries.filter((x) => x.kind === 'new').length;
         let n = 0;
         let failed = 0;
+        let firstError = null;
         try {
           const photos = [];
           for (const entry of entries) {
@@ -1286,9 +1314,10 @@ function openDumpEditor(item = null, initialFiles = []) {
             } catch (err) {
               console.error(err);
               failed++;
+              if (!firstError) firstError = err;
             }
           }
-          if (!photos.length) throw new Error("None of the photos could be uploaded. Try JPG or PNG photos.");
+          if (!photos.length) throw firstError || new Error('None of the photos could be uploaded.');
           // Only the cover keeps its tiny inline preview, so the post stays small.
           const slim = photos.map((ph, i) => ({ ...ph, thumbUrl: i === 0 ? (ph.thumbUrl || '') : '' }));
           const cover = slim[0];
@@ -1309,7 +1338,7 @@ function openDumpEditor(item = null, initialFiles = []) {
           entries.forEach((x) => x.preview && URL.revokeObjectURL(x.preview));
           busy = false;
           close();
-          if (failed) toast(`Posted, but ${failed} photo${failed > 1 ? 's' : ''} couldn't be uploaded.`, 'error');
+          if (failed) toast(`Posted, but ${failed} photo${failed > 1 ? 's' : ''} couldn't be uploaded: ${friendlyError(firstError)}`, 'error');
           else toast(item ? 'Dump saved' : 'Dump posted');
           const target = `#/p/${encodeURIComponent(id)}`;
           if (location.hash === target) route({ keepScroll: true });
@@ -1525,7 +1554,7 @@ document.addEventListener('click', async (e) => {
 document.addEventListener('change', async (e) => {
   const input = e.target.closest('[data-add-photos]');
   if (!input || !input.files.length) return;
-  const files = [...input.files].filter((f) => /^image\//.test(f.type));
+  const files = [...input.files].filter((f) => isImageFile(f));
   input.value = '';
   const id = input.dataset.addPhotos;
   const t = toast('Uploading photos…', 'info', 0);

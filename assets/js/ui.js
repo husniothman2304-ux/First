@@ -158,6 +158,9 @@ export function openModal({ title, body, wide = false, locked = false, onMount, 
   if (onMount) onMount(root.querySelector('.modal-body'), close);
   requestAnimationFrame(() => {
     root.classList.add('open');
+    // On touch screens, don't jump straight into a text box: the keyboard
+    // would pop up and push the window around.
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     const first = root.querySelector('.modal-body input:not([type=file]):not([type=checkbox]):not(.hp), .modal-body textarea, .modal-body button');
     if (first) first.focus();
   });
@@ -187,23 +190,39 @@ export function confirmDialog(message, { ok = 'Delete', danger = true } = {}) {
 // ── Images ──────────────────────────────────────────────────
 // Shrinks photos before upload so pages stay fast. GIFs are kept as they are
 // unless forceJpeg is set.
+// Phones sometimes hand over photos with an empty or odd file type, so the
+// file name is used as a fallback.
+const EXT_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', heif: 'image/heif', avif: 'image/avif' };
+export function imageType(file) {
+  const t = (file.type || '').toLowerCase();
+  if (/^image\/(jpeg|png|webp|gif|heic|heif|avif)$/.test(t)) return t;
+  const ext = String(file.name || '').split('.').pop().toLowerCase();
+  if (EXT_TYPES[ext]) return EXT_TYPES[ext];
+  return t.startsWith('image/') ? t : '';
+}
+export const isImageFile = (file) => !!imageType(file);
+
 export async function resizeImage(file, max = 2000, quality = 0.86, keepUnder = 1.5e6, forceJpeg = false) {
-  const type = file.type || '';
-  if (!/^image\/(jpeg|png|webp|gif|heic|heif|avif)$/i.test(type)) {
-    throw new Error('Please choose a JPG, PNG, WebP or GIF image.');
+  const type = imageType(file);
+  if (!type) {
+    throw new Error('Please choose a photo (JPG, PNG, HEIC, WebP or GIF).');
   }
-  if (type === 'image/gif' && !forceJpeg) return file;
+  // Keep the (possibly inferred) type on files returned unchanged.
+  const asTyped = (f) => (f.type === type ? f : new Blob([f], { type }));
+  if (type === 'image/gif' && !forceJpeg) return asTyped(file);
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
       const i = new Image();
       i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error("Couldn't read that image. Try a JPG or PNG."));
+      i.onerror = () => reject(new Error(/heic|heif/.test(type)
+        ? "This browser can't open HEIC photos. Use Safari, or set iPhone Camera → Formats → Most Compatible."
+        : "Couldn't read that image. Try a JPG or PNG."));
       i.src = url;
     });
     const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
     const outType = type === 'image/png' && !forceJpeg ? 'image/png' : 'image/jpeg';
-    if (scale === 1 && file.size <= keepUnder && outType === type) return file;
+    if (scale === 1 && file.size <= keepUnder && outType === type) return asTyped(file);
     const w = Math.max(1, Math.round(img.naturalWidth * scale));
     const h = Math.max(1, Math.round(img.naturalHeight * scale));
     const c = document.createElement('canvas');

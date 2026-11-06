@@ -1,6 +1,6 @@
 // Project build pages: status, progress, specs, milestones, a dated build log
 // and a gallery of build photos. Used by the project editor and project page.
-import { $, $$, esc, md, icon, imgSrc, toast, resizeImage } from './ui.js';
+import { $, $$, esc, md, icon, imgSrc, toast, resizeImage, isImageFile } from './ui.js';
 
 export const STATUSES = ['Planning', 'Designing', 'Building', 'Testing', 'Flying', 'Complete', 'On hold'];
 export const MAX_PHOTOS = 24;
@@ -192,7 +192,7 @@ export function mountProjectFields(el, it, api) {
     if (input) input.addEventListener('change', () => {
       for (const f of input.files) {
         if (entries.length >= MAX_PHOTOS) { toast(`Up to ${MAX_PHOTOS} build photos.`, 'error'); break; }
-        if (/^image\//.test(f.type)) entries.push({ kind: 'new', file: f, preview: URL.createObjectURL(f) });
+        if (isImageFile(f)) entries.push({ kind: 'new', file: f, preview: URL.createObjectURL(f) });
       }
       drawPhotos();
     });
