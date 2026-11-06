@@ -1,5 +1,6 @@
 import { loadBackend } from './backend.js';
 import { mountChat } from './chat.js';
+import { projectFieldsHTML, mountProjectFields, projectDetailsHTML, projectCardExtras } from './project.js';
 import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
 import { CAL_EVENTS } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
@@ -137,6 +138,7 @@ const projectCard = (i) => `
     ${coverHTML(i)}
     <div class="card-body">
       <h3>${esc(i.title)} ${draftBadge(i)}</h3>
+      ${projectCardExtras(i)}
       <p>${esc(i.summary || excerpt(i.body, 120))}</p>
       ${tagsHTML(i.tags)}
     </div>
@@ -439,6 +441,7 @@ async function viewItem(ctx, id) {
   const link = safeUrl(item.link);
   const img = hasImg(item.imageUrl) ? imgSrc(item.imageUrl) : '';
   const isPhoto = item.type === 'photo';
+  const pjd = item.type === 'project' ? projectDetailsHTML(item) : null;
 
   render(ctx, `
     <article class="article glass ${isPhoto ? 'is-photo' : ''}">
@@ -455,7 +458,9 @@ async function viewItem(ctx, id) {
       ${item.summary ? `<p class="lead">${esc(item.summary)}</p>` : ''}
       ${tagsHTML(item.tags)}
       ${link ? `<p><a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${icon('link')} Open project</a></p>` : ''}
+      ${pjd ? pjd.top : ''}
       ${item.body ? `<div class="prose">${md(item.body)}</div>` : ''}
+      ${pjd ? pjd.bottom : ''}
     </article>
     <section class="comments glass" id="comments">${commentsHTML(item.id, comments)}</section>`);
 }
@@ -963,6 +968,7 @@ function openEditor(type, item = null) {
           <input name="link" type="url" placeholder="https://" value="${esc(it.link)}"></label>` : ''}
         ${has.tags ? `<label>Tags <span class="muted">(comma separated)</span>
           <input name="tags" value="${esc((it.tags || []).join(', '))}"></label>` : ''}
+        ${type === 'project' ? projectFieldsHTML(it) : ''}
         <div class="md-field">
           <div class="md-tabs">
             <button type="button" class="seg active" data-x="write">Write</button>
@@ -988,6 +994,7 @@ function openEditor(type, item = null) {
       </form>`,
     onMount(el, close) {
       const form = $('form', el);
+      const pj = type === 'project' ? mountProjectFields(el, it, api) : null;
       let coverFile = null;
       let removeCover = false;
       const preview = $('.cover-preview', el);
@@ -1086,7 +1093,15 @@ function openEditor(type, item = null) {
               mediumUrl,
               mediumPath,
             };
+            let removed = [];
+            if (pj) {
+              const photos = await pj.uploadPhotos((n, total) => { submit.textContent = `Uploading photo ${n} of ${total}…`; });
+              Object.assign(data, pj.collect(), { photos });
+              removed = pj.removedPaths(photos);
+              submit.textContent = 'Saving…';
+            }
             const id = await api.saveItem(item ? item.id : null, data);
+            removed.forEach((p) => api.deleteUpload(p).catch(() => {}));
             if (it.imagePath && it.imagePath !== imagePath) api.deleteUpload(it.imagePath).catch(() => {});
             if (it.mediumPath && it.mediumPath !== mediumPath) api.deleteUpload(it.mediumPath).catch(() => {});
             close();
