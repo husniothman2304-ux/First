@@ -1,6 +1,7 @@
 import { loadBackend } from './backend.js';
 import { mountChat } from './chat.js';
 import { projectFieldsHTML, mountProjectFields, projectDetailsHTML, projectCardExtras } from './project.js';
+import { pendingImports, importCardsHTML, importProject } from './importer.js';
 import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
 import { CAL_EVENTS } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
@@ -405,6 +406,10 @@ async function viewSection(ctx, s) {
       </div>
     </header>
     <div id="list">${items.length ? sectionBody(s, items) : emptyHTML(s)}</div>`);
+  if (ok && state.owner && s.type === 'project') {
+    const pending = await pendingImports(items);
+    if (pending.length && !ctx.stale()) $('#list', ctx.view).insertAdjacentHTML('beforebegin', importCardsHTML(pending));
+  }
   if (!ok || !showSearch) return;
 
   $('.search', ctx.view).addEventListener('input', debounce((e) => {
@@ -1384,6 +1389,13 @@ document.addEventListener('click', async (e) => {
       case 'new': openTypePicker(); break;
       case 'new-type': openEditor(el.dataset.type); break;
       case 'upload-photos': uploadPhotos(); break;
+      case 'import-project':
+        await withBusy(el, 'Importing…', async () => {
+          const newId = await importProject(api, id, (n, total) => { el.textContent = `Uploading photo ${n} of ${total}…`; });
+          toast('Project imported');
+          location.hash = `#/p/${encodeURIComponent(newId)}`;
+        });
+        break;
       case 'view-photo':
         openModal({ title: 'Photo', wide: true, body: `<img class="photo-view" ${imgSrc(el.dataset.full)} alt="Photo">` });
         break;

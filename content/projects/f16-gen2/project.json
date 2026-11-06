@@ -1,0 +1,50 @@
+{
+  "id": "f16-gen2",
+  "type": "project",
+  "published": true,
+  "title": "3D-printed F-16 EDF jet",
+  "summary": "A 50 mm EDF F-16 printed in lightweight PLA on a Bambu Lab P2S, from slicer tuning to wiring and radio setup.",
+  "link": "",
+  "tags": ["rc", "3dprinting", "edf", "f16", "blender"],
+  "status": "Building",
+  "progress": "",
+  "cover": { "file": "cover.jpg", "caption": "Full assembly render in Blender" },
+  "photos": [
+    { "file": "cover.jpg", "caption": "Assembled, front: Blender Cycles render" },
+    { "file": "assembled-rear.jpg", "caption": "Assembled, rear: EDF outlet and tailerons" },
+    { "file": "exploded-front.jpg", "caption": "Exploded view: every printed part and the electronics" },
+    { "file": "exploded-rear.jpg", "caption": "Exploded view from the rear" }
+  ],
+  "specs": [
+    { "k": "Airframe", "v": "ptikyle \"Built Fast\" F-16 Gen 2, 3D printed" },
+    { "k": "Printer", "v": "Bambu Lab P2S" },
+    { "k": "Materials", "v": "eSUN ePLA-LW (lightweight foaming PLA), PLA wing keys" },
+    { "k": "Power (EDF / motor)", "v": "50 mm EDF, 4300KV" },
+    { "k": "ESC", "v": "Hobbywing Skywalker 40A V2 with BEC" },
+    { "k": "Battery", "v": "Alienmodel 4S 1300 mAh, XT60" },
+    { "k": "Servos", "v": "2 × MG90S on the tailerons (elevon mix)" },
+    { "k": "Radio / receiver", "v": "RadioMaster Pocket (ExpressLRS) + BetaFPV ELRS 2.4G PWM receiver" }
+  ],
+  "milestones": [
+    { "text": "Choose the airframe and buy the parts", "done": true },
+    { "text": "Tune the slicer for lightweight PLA", "done": true },
+    { "text": "Print test parts and compare settings", "done": true },
+    { "text": "Design wing joiner keys", "done": true },
+    { "text": "Rebuild the full 3D assembly in Blender", "done": true },
+    { "text": "Plan the wiring", "done": true },
+    { "text": "Print all airframe parts", "done": false },
+    { "text": "Solder the XT60 and wire the electronics", "done": false },
+    { "text": "Bind the radio and calibrate the ESC", "done": false },
+    { "text": "Glue up the airframe and fit the electronics", "done": false },
+    { "text": "Check the centre of gravity and control throws", "done": false },
+    { "text": "First flight", "done": false }
+  ],
+  "log": [
+    { "date": "2026-10-27", "text": "The PLA arrived. Sorted the STL files into a print queue (tail pods first as a test print) and set up Bambu Studio presets for eSUN ePLA-LW." },
+    { "date": "2026-10-29", "text": "Switched to Troy McMillan's LW-PLA settings: 0.25 mm layers, a single wall, 3% gyroid / 6% grid infill and low flow so the foaming PLA expands into the gaps. Printed two tail pods side by side to compare against my first profile, then cut retraction and turned off z-hop to fight the stringing." },
+    { "date": "2026-10-30", "text": "The kit has sockets for the wings but no joiner, so I measured the sockets in the STL files and designed two PLA wing keys with 0.3 mm and 0.5 mm clearance to test-print. Also rebuilt the whole jet as a 3D assembly in Blender to see what glues to what and where the electronics sit." },
+    { "date": "2026-11-02", "text": "Rendered the assembly in Blender Cycles: studio lighting, metallic paint and an exploded view of every part." },
+    { "date": "2026-11-03", "text": "Electronics: planned the wiring (battery → XT60 → ESC → EDF, servos and ESC into the receiver), set up the soldering iron, and started binding the RadioMaster Pocket to the ExpressLRS receiver." }
+  ],
+  "body": "## The plan\n\nA small, fast F-16 that I can print myself. The airframe is ptikyle's **\"Built Fast\" F-16 Gen 2**, printed in lightweight foaming PLA and powered by a **50 mm electric ducted fan** on a 4S battery. Everything is printed on my Bambu Lab P2S.\n\n## Printing in lightweight PLA\n\nLW-PLA foams as it prints, so it needs very different settings from normal PLA. What worked best for me (based on Troy McMillan's settings):\n\n| Setting | Value |\n| --- | --- |\n| Layer height | 0.25 mm |\n| Walls | 1 |\n| Infill | 3% gyroid (6% grid on the tailerons) |\n| Flow | 0.55 |\n| Nozzle | 230 °C |\n| Retraction | 0.2 mm, no z-hop |\n\nThe hardest part is stringing: LW-PLA leaves fine \"hair\" everywhere, so I'm still tuning retraction and travel.\n\n## Wing joiner keys\n\nThe wings plug into stubs on the fuselage, but there was no file for the part that joins them. I measured the sockets from the STL files (a slanted 22 × 11 mm tunnel in the fuselage and a 13 × 3 mm pocket in each wing) and designed a key in two fits, standard (0.3 mm) and loose (0.5 mm), to test which one slides in best.\n\n## 3D assembly\n\nTo understand how the 17 printed parts fit together, I rebuilt the whole jet as an assembly in Blender, with an exploded view, the electronics in the equipment bay and the wire routes.\n\n## Electronics\n\nThe 4S battery feeds a 40 A ESC through an XT60 plug. The ESC drives the EDF and powers the receiver and servos through its built-in BEC. Two MG90S servos move the tailerons, mixed on the radio as elevons so they handle both pitch and roll.\n\n## What's next\n\nFinish printing, solder the power leads, set up the radio mixes and calibrate the ESC. Then glue up, balance and fly."
+}
