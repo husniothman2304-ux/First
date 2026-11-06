@@ -75,7 +75,7 @@ Every project page has the same layout: cover, status and progress ring, specs, 
   2. Fill in `project.json` and put the photos (JPG, about 2000 px wide) next to it. Every `file` in `cover` and `photos` must exist.
   3. Add the id to `content/projects/index.json`, e.g. `["f16-gen2", "rc-car"]`. Leave `_template` out.
      Projects show newest first, and the import cards appear in this order, so put the one you want shown first **last**.
-  4. Push. Then, signed in, open **Projects → Import project**. Each id is imported only once. Set `"published": false` to import it as a private draft.
+  4. Push. Next time you open the site signed in, it's added automatically (or tap **Projects → Import project**). Each id is imported only once. Add `"date": "YYYY-MM-DD"` to place it in time on the Projects page (newest first). Set `"published": false` to import it as a private draft.
 
 ## How it's organised
 ```

@@ -59,6 +59,7 @@ export async function importProject(api, id, onProgress) {
   return api.saveItem(null, {
     type: 'project',
     title: p.title || '',
+    date: /^\d{4}-\d{2}-\d{2}$/.test(p.date || '') ? p.date : '',
     summary: p.summary || '',
     link: p.link || '',
     tags: (p.tags || []).slice(0, 12),

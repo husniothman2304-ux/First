@@ -1,9 +1,10 @@
 {
   "id": "traffic-cone",
   "type": "project",
-  "published": false,
+  "published": true,
   "title": "Traffic Cone Dropper & Retriever",
   "summary": "A group design project (SEMM1513): an Arduino prototype that places and collects traffic cones automatically, so road workers don’t have to. My concept was chosen as the final design.",
+  "date": "2026-07-03",
   "link": "",
   "tags": [
     "SEMM1513",

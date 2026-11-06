@@ -330,7 +330,7 @@ async function route({ keepScroll = false } = {}) {
 
 // ── Views ───────────────────────────────────────────────────
 async function viewHome(ctx) {
-  const items = (await api.listItems(null, { includeDrafts: state.owner })).filter((i) => byType[i.type]);
+  const items = byDate((await api.listItems(null, { includeDrafts: state.owner })).filter((i) => byType[i.type]));
   const p = state.profile;
   const motto = String(p.motto ?? '').trim();
   const nameTag = motto ? 'h2' : 'h1';
@@ -391,8 +391,41 @@ function splitMotto(text) {
 }
 
 
+// Newest first. A project can carry its own `date` (YYYY-MM-DD, e.g. when it
+// was finished), which is used instead of the day it was added to the site.
+const itemTime = (i) => (i.date && !Number.isNaN(Date.parse(i.date)) ? Date.parse(i.date) : i.createdAt || 0);
+const byDate = (list) => [...list].sort((a, b) => itemTime(b) - itemTime(a));
+
+// When the owner opens the site signed in, ready-made projects from the repo
+// (content/projects) are added automatically, so nothing has to be tapped.
+let autoImporting = false;
+async function autoImport() {
+  if (autoImporting || !state.owner) return;
+  autoImporting = true;
+  try {
+    const mine = await api.listItems('project', { includeDrafts: true });
+    const pending = await pendingImports(mine);
+    for (const p of pending) {
+      if (!state.owner) break;
+      const t = toast(`Adding "${p.title}" to your projects…`, 'info', 0);
+      try {
+        await importProject(api, p.id, (n, total) => t.update(`Adding "${p.title}": photo ${n} of ${total}…`));
+        t.close();
+        toast(`"${p.title}" is now on your Projects page`);
+      } catch (err) {
+        t.close();
+        console.error(err);
+        toast(`Couldn't add "${p.title}": ${friendlyError(err)}`, 'error');
+      }
+    }
+    if (pending.length) route({ keepScroll: true });
+  } finally {
+    autoImporting = false;
+  }
+}
+
 async function viewSection(ctx, s) {
-  const items = await api.listItems(s.type, { includeDrafts: state.owner });
+  const items = byDate(await api.listItems(s.type, { includeDrafts: state.owner }));
   const showSearch = s.type !== 'photo' && items.length > 3;
   const ok = render(ctx, `
     <header class="page-head glass">
@@ -458,7 +491,7 @@ async function viewItem(ctx, id) {
         </div>` : ''}
       </div>
       ${isPhoto ? dumpPhotosHTML(item) : (img ? `<div class="article-cover"><img ${img} alt=""></div>` : '')}
-      <div class="meta"><time>${fmtDate(item.createdAt)}</time> ${draftBadge(item)}</div>
+      <div class="meta"><time>${fmtDate(itemTime(item))}</time> ${draftBadge(item)}</div>
       ${item.title ? `<h1>${esc(item.title)}</h1>` : ''}
       ${item.summary ? `<p class="lead">${esc(item.summary)}</p>` : ''}
       ${tagsHTML(item.tags)}
@@ -1600,5 +1633,6 @@ api.onAuthChange(async (user) => {
   renderBanner();
   route({ keepScroll: !firstAuth });
   firstAuth = false;
+  if (state.owner) autoImport();
 });
 window.addEventListener('hashchange', () => route());
