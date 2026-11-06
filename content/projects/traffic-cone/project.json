@@ -1,0 +1,113 @@
+{
+  "id": "traffic-cone",
+  "type": "project",
+  "published": false,
+  "title": "Traffic Cone Dropper & Retriever",
+  "summary": "A group design project (SEMM1513): an Arduino prototype that places and collects traffic cones automatically, so road workers don’t have to. My concept was chosen as the final design.",
+  "link": "",
+  "tags": [
+    "SEMM1513",
+    "design",
+    "Arduino",
+    "prototype",
+    "group project"
+  ],
+  "status": "Complete",
+  "progress": 100,
+  "cover": {
+    "file": "cover.jpg",
+    "caption": "Illustration of the prototype: cones on the conveyor, the stopper gate and a placed cone"
+  },
+  "photos": [],
+  "specs": [
+    {
+      "k": "Course",
+      "v": "SEMM1513 · Group 1"
+    },
+    {
+      "k": "My role",
+      "v": "Concept 2: selected as the final design"
+    },
+    {
+      "k": "Microcontroller",
+      "v": "Arduino Uno Rev3"
+    },
+    {
+      "k": "Mechanisms",
+      "v": "Conveyor belt + stopper mechanism"
+    },
+    {
+      "k": "Motors",
+      "v": "TT gear motors + stepper (2048 steps/rev)"
+    },
+    {
+      "k": "Power",
+      "v": "6 × AA battery pack"
+    },
+    {
+      "k": "Wheels",
+      "v": "4 plastic wheels"
+    },
+    {
+      "k": "Body",
+      "v": "3D-printed (about 200 g)"
+    },
+    {
+      "k": "Prototype cost",
+      "v": "RM 80"
+    },
+    {
+      "k": "Supervisor",
+      "v": "Dr Ahmad Humaizi Bin Rozaini"
+    }
+  ],
+  "milestones": [
+    {
+      "text": "Problem statement and research on existing cone trucks",
+      "done": true
+    },
+    {
+      "text": "Product design specification (PDS) for a full-scale system",
+      "done": true
+    },
+    {
+      "text": "Morphological charts for mechanisms and control system",
+      "done": true
+    },
+    {
+      "text": "Five concepts, one per team member",
+      "done": true
+    },
+    {
+      "text": "Decision matrix: my Concept 2 selected",
+      "done": true
+    },
+    {
+      "text": "Final concept refined: stopper mechanism, plastic wheels, AA pack",
+      "done": true
+    },
+    {
+      "text": "SolidWorks models: conveyor base and stopper",
+      "done": true
+    },
+    {
+      "text": "Prototype 3D-printed and assembled",
+      "done": true
+    },
+    {
+      "text": "Arduino programming and testing",
+      "done": true
+    },
+    {
+      "text": "Report submitted",
+      "done": true
+    }
+  ],
+  "log": [
+    {
+      "date": "2026-07-03",
+      "text": "Final report submitted. In testing, the prototype placed and retrieved traffic cones effectively. 🎉"
+    }
+  ],
+  "body": "## The problem\nOn Malaysian roads, traffic cones for maintenance work are still placed and collected **by hand**. Workers stand on the back of a moving truck or walk along live lanes, one cone at a time. It's slow, tiring and dangerous, and because it depends on each worker's timing, the spacing between cones often ends up uneven, which can confuse drivers.\n\n## What we built\nA small-scale **automatic traffic cone dropper and retriever**: a wheeled prototype that carries cones on a conveyor belt, sets them down on the road and collects them again, so nobody has to stand in traffic. It runs on an **Arduino Uno**, with a 3D-printed body, a conveyor belt driven by a TT gear motor and a **stopper mechanism** at the front of the conveyor.\n\n## My part: Concept 2 became the final design\nEach of the five of us came up with our own concept from the group's morphological chart. Mine (**Concept 2**) was a small buggy that:\n- **places** cones with a conveyor belt helped by a robotic arm,\n- **retrieves** them with a robotic arm that works like a **gate**: it opens and closes and moves forwards and backwards,\n- **stores** them on a conveyor belt.\n\nWe scored every concept in a decision matrix on functionality, cost, ease of fabrication, safety, reliability, durability and ease of maintenance. **Concept 2 got the highest score and was chosen as the final design.**\n\nFor the prototype we kept the idea but made it simpler and cheaper:\n- the robotic arm became a simpler **stopper mechanism** at the front of the conveyor, which worked well in testing,\n- the rubber wheels became **four plastic wheels** (cheaper and easy to find),\n- the power bank became a **6 × AA battery pack**.\n\n## How it works\nThe Arduino runs three jobs at the same time without blocking each other (using `millis()` timers instead of `delay()`):\n1. **Conveyor motor:** runs continuously, carrying the cones along.\n2. **Drive motor:** moves for **0.5 s**, then stops for **2 s**, again and again. That rhythm is what spaces the cones evenly on the road.\n3. **Stepper motor (stopper):** turns one full revolution (2048 steps), then reverses, opening and closing the stopper.\n\n## The five concepts\n| Concept | By | Place | Retrieve | Store |\n| :-- | :-- | :-- | :-- | :-- |\n| 1 | Raziq | Conveyor + robotic arm | Conveyor belt | Conveyor belt |\n| **2** | **Husni (me)** | **Conveyor + robotic arm** | **Robotic arm (gate)** | **Conveyor belt** |\n| 3 | Omar | Conveyor belt | Conveyor belt | Conveyor belt |\n| 4 | Nafiz | Robotic arm | Robotic arm | Robotic arm |\n| 5 | Alya | Robotic arm | Spinning rods | Robotic arm |\n\n## Full-scale design target\nWe also wrote a product design specification for a real, truck-mounted version, following JKR and LLM (Malaysian Highway Authority) rules:\n- fits on a 3-ton flatbed truck: width ≤ 2.5 m, height ≤ 3.0 m\n- works at **5–15 km/h** with programmable cone spacing of **5–20 m** and a **3–5 s** cycle\n- handles cones **750–1000 mm** tall and **3.5–5.0 kg**, and can pick up cones tilted up to **45°**\n- carries **50–100 cones** per run\n- ASTM A36 steel, galvanised or powder-coated; IP67 electronics\n- controlled from the cabin (PLC, 12/24 V or hydraulic PTO), with emergency stops, amber strobes and an arrow board\n\n## What it cost\n| Part | Qty | RM |\n| :-- | --: | --: |\n| TT gear motor | 2 | 12.00 |\n| 3D printing (RM 0.20/g) | 200 g | 40.00 |\n| Stepper motor | 1 | 11.20 |\n| Jumper wires (F–M) | 40 | 4.60 |\n| Breadboard | 1 | 3.90 |\n| Board | 1 | 1.50 |\n| Stick | 1 | 2.00 |\n| Hot-melt glue stick | 1 | 2.40 |\n| Sandpaper | 1 | 2.40 |\n| **Total** | | **80.00** |\n\n## Result\nIn testing, the prototype placed and retrieved traffic cones effectively while cutting out manual handling. The bigger takeaway: replacing a risky manual job with a simple, well-timed mechanism can make road work faster and, most importantly, keep workers out of live traffic.\n\n## Arduino code\n```cpp\n#include <Stepper.h>\n\nconst int stepsPerRevolution = 2048;\nStepper myStepper(stepsPerRevolution, 8, 10, 9, 11);\n\n// Motor 1 (TT) — channel A\nconst int ENA = 6, IN1 = 7, IN2 = 5;\n// Motor 2 (conveyor TT) — channel B\nconst int ENB = 3, IN3 = 4, IN4 = 2;\n\n// timing trackers (millis-based, non-blocking)\nunsigned long m1Timer = 0;\nunsigned long stepTimer = 0;\n\n// motor 1 move/stop cycle state\nbool m1Moving = true;\nunsigned long m1MoveDur = 500;    // move 0.5 s\nunsigned long m1StopDur = 2000;   // stop 2 s\n\n// stepper state\nint stepDir = 1;\nlong stepCount = 0;\n\nvoid m1Move(int dir, int speed) {\n  digitalWrite(IN1, dir ? HIGH : LOW);\n  digitalWrite(IN2, dir ? LOW : HIGH);\n  analogWrite(ENA, speed);\n}\nvoid m1Brake() {\n  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW); analogWrite(ENA, 0);\n}\nvoid m2Move(int dir, int speed) {\n  digitalWrite(IN3, dir ? HIGH : LOW);\n  digitalWrite(IN4, dir ? LOW : HIGH);\n  analogWrite(ENB, speed);\n}\n\nvoid setup() {\n  myStepper.setSpeed(10);\n  pinMode(ENA, OUTPUT); pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);\n  pinMode(ENB, OUTPUT); pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);\n  Serial.begin(9600);\n  m1Timer = millis();\n  stepTimer = millis();\n}\n\nvoid loop() {\n  unsigned long now = millis();\n\n  // Motor 2 (conveyor): runs continuously\n  m2Move(1, 150);\n\n  // Motor 1: move/stop cycle without freezing anything\n  if (m1Moving && now - m1Timer >= m1MoveDur) {\n    m1Brake();\n    m1Moving = false;\n    m1Timer = now;\n  } else if (!m1Moving && now - m1Timer >= m1StopDur) {\n    m1Move(1, 120);\n    m1Moving = true;\n    m1Timer = now;\n  }\n\n  // Stepper: one step at a time, on its own schedule (~3 ms per step)\n  if (now - stepTimer >= 3) {\n    myStepper.step(stepDir);\n    stepTimer = now;\n    stepCount++;\n    if (stepCount >= stepsPerRevolution) {  // full turn -> reverse\n      stepDir = -stepDir;\n      stepCount = 0;\n    }\n  }\n}\n```\n\n## Team\nGroup 1, **SEMM1513** Section 1, School of Mechanical Engineering, Universiti Teknologi Malaysia. Supervised by **Dr Ahmad Humaizi Bin Rozaini**. Report submitted 3 July 2026.\n- Mohammad Raziq bin M Kodrat\n- **Husni bin Othman**\n- Alya Iman binti Zahrul Nizam\n- Omar Rahman\n- Muhammad Nafiz bin Mohamed Nizam\n"
+}

@@ -1933,3 +1933,8 @@ input[type="range"] { padding: 0; height: 28px; background: none; border: 0; box
 }
 .import-card { margin-bottom: 18px; padding: 28px 24px; text-align: center; }
 .pj-h .pj-add-ph { margin-left: auto; font-family: var(--font); text-transform: none; cursor: pointer; }
+/* Let wide content (code, tables) scroll inside its box instead of widening the page */
+main { grid-template-columns: minmax(0, 1fr); }
+.article, .comments, .chat, .cal, .page-head { min-width: 0; }
+.prose pre { max-width: 100%; max-height: 520px; overflow: auto; }
+.prose table { margin: 0 0 1.2em; }

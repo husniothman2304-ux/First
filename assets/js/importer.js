@@ -29,7 +29,7 @@ export function importCardsHTML(list) {
     <div class="empty glass import-card">
       ${icon('projects', 'xl')}
       <p><strong>${esc(p.title)}</strong> is ready to import.<br>
-        <span class="muted small">Its photos are uploaded and it becomes a normal project you can edit.</span></p>
+        <span class="muted small">Its photos are uploaded and it becomes a normal project you can edit.${p.published === false ? ' It comes in as a private draft, so check it, then Edit → turn on Published.' : ''}</span></p>
       <button class="btn primary" data-act="import-project" data-id="${esc(p.id)}">${icon('plus')} Import project</button>
     </div>`).join('');
 }
