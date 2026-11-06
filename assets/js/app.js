@@ -418,7 +418,10 @@ async function autoImport() {
         toast(`Couldn't add "${p.title}": ${friendlyError(err)}`, 'error');
       }
     }
-    if (pending.length) route({ keepScroll: true });
+    // Refresh only pages that list projects, so nothing else (an open editor,
+    // the calendar month you're on) gets reset.
+    const seg = location.hash.replace(/^#\/?/, '').split('/')[0];
+    if (pending.length && (seg === '' || seg === 'projects')) route({ keepScroll: true });
   } finally {
     autoImporting = false;
   }
