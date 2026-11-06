@@ -66,6 +66,16 @@ Paste the values into `FIREBASE_CONFIG` in [`assets/js/config.js`](assets/js/con
 | Read and reply to chats | **Inbox** icon in the top bar (the red badge counts unread ones) |
 | Remove a comment | Trash icon next to the comment (only you see it) |
 
+## Adding a project with the build-page layout
+Every project page has the same layout: cover, status and progress ring, specs, the write-up, milestones, build photos and a dated build log (see the F-16 EDF jet).
+
+- **From the site:** **Projects → New project**. The spec rows, starter milestones and write-up headings are filled in for you. Replace the text, delete what you don't need, and add photos under **Build photos**.
+- **From the repo (bigger write-ups):**
+  1. Copy `content/projects/_template/` to `content/projects/<new-id>/` (for example `content/projects/rc-car/`).
+  2. Fill in `project.json` and put the photos (JPG, about 2000 px wide) next to it. Every `file` in `cover` and `photos` must exist.
+  3. Add the id to `content/projects/index.json`, e.g. `["f16-gen2", "rc-car"]`. Leave `_template` out.
+  4. Push. Then, signed in, open **Projects → Import project**. Each id is imported only once.
+
 ## How it's organised
 ```
 index.html                 page shell

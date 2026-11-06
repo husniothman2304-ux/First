@@ -1,0 +1,37 @@
+{
+  "id": "my-project",
+  "type": "project",
+  "published": true,
+  "title": "Project name",
+  "summary": "One sentence: what it is and how it's made.",
+  "link": "",
+  "tags": ["tag1", "tag2"],
+  "status": "Building",
+  "progress": "",
+  "cover": { "file": "cover.jpg", "caption": "Main photo" },
+  "photos": [
+    { "file": "cover.jpg", "caption": "Main photo" },
+    { "file": "photo-2.jpg", "caption": "What this photo shows" }
+  ],
+  "specs": [
+    { "k": "Airframe", "v": "" },
+    { "k": "Printer", "v": "" },
+    { "k": "Materials", "v": "" },
+    { "k": "Power (EDF / motor)", "v": "" },
+    { "k": "ESC", "v": "" },
+    { "k": "Battery", "v": "" },
+    { "k": "Servos", "v": "" },
+    { "k": "Radio / receiver", "v": "" }
+  ],
+  "milestones": [
+    { "text": "Plan the build and buy the parts", "done": false },
+    { "text": "Design or prepare the parts", "done": false },
+    { "text": "Build it", "done": false },
+    { "text": "Test it", "done": false },
+    { "text": "Finish and share it", "done": false }
+  ],
+  "log": [
+    { "date": "2026-01-01", "text": "What I did and what I learned." }
+  ],
+  "body": "## The plan\n\nWhat is it, and why are you building it?\n\n## How I built it\n\nMaterials, tools and the settings that worked.\n\n| Setting | Value |\n| --- | --- |\n| | |\n\n## Problems and fixes\n\nWhat went wrong, and how you solved it.\n\n## What's next\n\nThe next steps."
+}

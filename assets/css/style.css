@@ -1932,3 +1932,4 @@ input[type="range"] { padding: 0; height: 28px; background: none; border: 0; box
   .pj-ring { width: 76px; height: 76px; }
 }
 .import-card { margin-bottom: 18px; padding: 28px 24px; text-align: center; }
+.pj-h .pj-add-ph { margin-left: auto; font-family: var(--font); text-transform: none; cursor: pointer; }

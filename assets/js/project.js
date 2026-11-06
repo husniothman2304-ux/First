@@ -3,9 +3,30 @@
 import { $, $$, esc, md, icon, imgSrc, toast, resizeImage } from './ui.js';
 
 export const STATUSES = ['Planning', 'Designing', 'Building', 'Testing', 'Flying', 'Complete', 'On hold'];
-const MAX_PHOTOS = 24;
-// Suggested spec rows for a new project (handy for an FPV jet); empty ones aren't shown.
-const SPEC_HINTS = ['Airframe', 'Scale / wingspan', 'Power (EDF / motor)', 'ESC', 'Battery', 'All-up weight', 'Flight controller', 'FPV camera / VTX', 'Radio / receiver', 'Materials'];
+export const MAX_PHOTOS = 24;
+// A new project starts with the same layout as the F-16 build page: these spec
+// rows, starter milestones and write-up headings. Empty spec rows aren't shown.
+const SPEC_HINTS = ['Airframe', 'Printer', 'Materials', 'Power (EDF / motor)', 'ESC', 'Battery', 'Servos', 'Radio / receiver'];
+const MILESTONE_HINTS = ['Plan the build and buy the parts', 'Design or prepare the parts', 'Build it', 'Test it', 'Finish and share it'];
+export const BODY_TEMPLATE = `## The plan
+
+_What is it, and why are you building it?_
+
+## How I built it
+
+_Materials, tools and the settings that worked._
+
+| Setting | Value |
+| --- | --- |
+| | |
+
+## Problems and fixes
+
+_What went wrong, and how you solved it._
+
+## What's next
+
+_The next steps._`;
 
 const clamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -26,8 +47,8 @@ export function projectCardExtras(i) {
 
 // ── Project page sections ───────────────────────────────────
 // Returns { top, bottom }: progress + specs go above the write-up; milestones,
-// photos and the build log go below it.
-export function projectDetailsHTML(i) {
+// photos and the build log go below it. The owner also gets an "Add photos" button.
+export function projectDetailsHTML(i, owner = false) {
   const specs = (i.specs || []).filter((s) => s.k && s.v);
   const ms = (i.milestones || []).filter((m) => m.text);
   const log = (i.log || []).filter((l) => l.text).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -58,9 +79,11 @@ export function projectDetailsHTML(i) {
         <h2 class="pj-h">${icon('notes')} Milestones</h2>
         <ol class="pj-ms">${ms.map((m) => `<li class="${m.done ? 'done' : ''}"><span class="pj-check" aria-hidden="true">${m.done ? '✓' : ''}</span><span>${esc(m.text)}</span>${m.done ? '<span class="sr-only">(done)</span>' : ''}</li>`).join('')}</ol>
       </section>` : ''}
-    ${photos.length ? `
+    ${photos.length || owner ? `
       <section class="pj-sec">
-        <h2 class="pj-h">${icon('photos')} Build photos <span class="count">${photos.length}</span></h2>
+        <h2 class="pj-h">${icon('photos')} Build photos <span class="count">${photos.length}</span>
+          ${owner && photos.length < MAX_PHOTOS ? `<label class="btn sm pj-add-ph">${icon('plus')} Add photos
+            <input type="file" accept="image/*" multiple hidden data-add-photos="${esc(i.id)}"></label>` : ''}</h2>
         <div class="pj-photos">${photos.map((ph, n) => `
           <button type="button" class="pj-ph" data-act="view-photo" data-full="${esc(ph.url)}" aria-label="View build photo ${n + 1}">
             <img ${imgSrc(ph.mediumUrl || ph.url)} alt="${esc(ph.caption || `Build photo ${n + 1}`)}" loading="lazy">
@@ -96,7 +119,8 @@ const logRow = (l = {}) => `
   </div>`;
 
 export function projectFieldsHTML(it) {
-  const specs = it.specs && it.specs.length ? it.specs : (it.id ? [] : SPEC_HINTS.slice(0, 6).map((k) => ({ k, v: '' })));
+  const specs = it.specs && it.specs.length ? it.specs : (it.id ? [] : SPEC_HINTS.map((k) => ({ k, v: '' })));
+  const milestones = it.milestones || (it.id ? [] : MILESTONE_HINTS.map((text) => ({ text, done: false })));
   return `
     <fieldset class="pj-edit">
       <legend>Build details</legend>
@@ -117,7 +141,7 @@ export function projectFieldsHTML(it) {
       </div>
       <div class="pj-block" data-list="milestones">
         <div class="pj-block-head"><strong>Milestones</strong><button type="button" class="btn sm ghost" data-pj="add-ms">${icon('plus')} Add milestone</button></div>
-        <div class="pj-rows">${(it.milestones || []).map(msRow).join('')}</div>
+        <div class="pj-rows">${milestones.map(msRow).join('')}</div>
       </div>
       <div class="pj-block" data-list="log">
         <div class="pj-block-head"><strong>Build log</strong><button type="button" class="btn sm ghost" data-pj="add-log">${icon('plus')} Add update</button></div>

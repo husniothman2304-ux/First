@@ -1,6 +1,6 @@
 import { loadBackend } from './backend.js';
 import { mountChat } from './chat.js';
-import { projectFieldsHTML, mountProjectFields, projectDetailsHTML, projectCardExtras } from './project.js';
+import { projectFieldsHTML, mountProjectFields, projectDetailsHTML, projectCardExtras, BODY_TEMPLATE, MAX_PHOTOS } from './project.js';
 import { pendingImports, importCardsHTML, importProject } from './importer.js';
 import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
 import { CAL_EVENTS } from './calendar-data.js';
@@ -446,7 +446,7 @@ async function viewItem(ctx, id) {
   const link = safeUrl(item.link);
   const img = hasImg(item.imageUrl) ? imgSrc(item.imageUrl) : '';
   const isPhoto = item.type === 'photo';
-  const pjd = item.type === 'project' ? projectDetailsHTML(item) : null;
+  const pjd = item.type === 'project' ? projectDetailsHTML(item, state.owner) : null;
 
   render(ctx, `
     <article class="article glass ${isPhoto ? 'is-photo' : ''}">
@@ -947,6 +947,8 @@ function openEditor(type, item = null) {
     tags: type !== 'photo',
   };
   const it = { title: '', summary: '', link: '', tags: [], body: '', published: true, imageUrl: '', imagePath: '', thumbUrl: '', mediumUrl: '', mediumPath: '', ...(item || {}) };
+  // New projects start from the build-page write-up headings.
+  if (!item && type === 'project') it.body = BODY_TEMPLATE;
   const coverPreview = (url) => (hasImg(url)
     ? `<img ${imgSrc(url)} alt="">`
     : `${icon('photos', 'xl')}<span>${type === 'photo' ? 'Choose a photo' : 'Add a cover image (optional)'}</span>`);
@@ -1480,6 +1482,40 @@ document.addEventListener('click', async (e) => {
   } catch (err) {
     console.error(err);
     toast(friendlyError(err), 'error');
+  }
+});
+
+// "Add photos" on a project page: upload the picked photos and append them to its gallery.
+document.addEventListener('change', async (e) => {
+  const input = e.target.closest('[data-add-photos]');
+  if (!input || !input.files.length) return;
+  const files = [...input.files].filter((f) => /^image\//.test(f.type));
+  input.value = '';
+  const id = input.dataset.addPhotos;
+  const t = toast('Uploading photos…', 'info', 0);
+  try {
+    const item = await api.getItem(id);
+    if (!item) throw new Error('This project no longer exists.');
+    const photos = Array.isArray(item.photos) ? item.photos : [];
+    const room = MAX_PHOTOS - photos.length;
+    if (files.length > room) toast(`Up to ${MAX_PHOTOS} build photos, so only ${room} more fit.`, 'error');
+    let added = 0;
+    for (const f of files.slice(0, room)) {
+      t.update(`Uploading photo ${added + 1} of ${Math.min(files.length, room)}…`);
+      const up = await api.uploadImage(await resizeImage(f, 2400, 0.95), { medium: true });
+      photos.push({ url: up.url, thumbUrl: '', mediumUrl: up.mediumUrl || '', path: up.path, mediumPath: up.mediumPath || '' });
+      added++;
+    }
+    if (added) {
+      await api.saveItem(id, { photos });
+      toast(`${added} photo${added > 1 ? 's' : ''} added`);
+      route({ keepScroll: true });
+    }
+  } catch (err) {
+    console.error(err);
+    toast(friendlyError(err), 'error');
+  } finally {
+    t.close();
   }
 });
 
