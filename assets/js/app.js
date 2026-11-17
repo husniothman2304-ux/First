@@ -3,7 +3,7 @@ import { mountChat } from './chat.js';
 import { projectFieldsHTML, mountProjectFields, projectDetailsHTML, projectCardExtras, BODY_TEMPLATE, MAX_PHOTOS } from './project.js';
 import { pendingImports, importCardsHTML, importProject } from './importer.js';
 import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
-import { CAL_EVENTS } from './calendar-data.js';
+import { CAL_EVENTS, RC_PLAN } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
@@ -845,10 +845,11 @@ async function viewCalendar(ctx) {
     <header class="page-head glass">
       <div>
         <h1>${icon('calendar')} Calendar</h1>
-        <p class="muted">Session 2026/2027 · UTM Johor Bahru · tests, holidays and breaks.</p>
+        <p class="muted">Session 2026/2027 · UTM Johor Bahru · tests, holidays, breaks and my RC plane plan.</p>
       </div>
       <div class="row">
         <button class="btn" data-act="export-cal" title="Download for Apple or Google Calendar">${icon('calendar')} Add to my calendar</button>
+        <button class="btn" data-act="export-rc" title="RC plane plan with an 8 AM reminder each day">${icon('calendar')} Add RC plan to my calendar</button>
         ${state.owner ? `<button class="btn primary" data-act="new-event">${icon('plus')} New event</button>` : ''}
       </div>
     </header>
@@ -1527,6 +1528,10 @@ document.addEventListener('click', async (e) => {
           toast('Chat deleted');
           location.hash = '#/inbox';
         }
+        break;
+      case 'export-rc':
+        downloadIcs(RC_PLAN, { name: 'RC plane plan', file: 'rc-plane-plan.ics' });
+        toast('RC plan downloaded. Open it to add every day to your calendar, with an 8 AM reminder.');
         break;
       case 'export-cal':
         downloadIcs(calEvents.length ? calEvents : CAL_EVENTS);
