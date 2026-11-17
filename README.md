@@ -90,3 +90,17 @@ firestore.rules            who can read/write what           ← put your user I
 
 ## Spam
 Comments and messages have a hidden "honeypot" field and a short per-browser cooldown, and the rules cap their length. If spam becomes a problem, turn on [Firebase App Check](https://firebase.google.com/docs/app-check) with reCAPTCHA.
+
+## Push notifications (owner only)
+
+New chat messages and calendar reminders (8 AM Malaysia time: today's RC plane
+task, tests today and tomorrow, your own events; plus 2 hours before each test)
+are sent by Netlify Functions in `netlify/functions/`. On iPad / iPhone they only
+work in the Home Screen app. Turn them on with the **Notifications** button in
+the Inbox (or **Reminders** on the Calendar).
+
+Setup: one Netlify environment variable, `FIREBASE_SERVICE_ACCOUNT`, holding the
+whole service-account JSON file (Firebase console → Project settings → Service
+accounts → Generate new private key). Never commit that file. The Web Push keys
+are created automatically and stored in Firestore under `push/`, which has no
+rule in `firestore.rules`, so browsers can't read it.

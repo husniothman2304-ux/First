@@ -12,6 +12,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { FIREBASE_CONFIG } from './config.js';
 import { fitDataUrl } from './ui.js';
+import { pingChat } from './push.js';
 
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
@@ -50,6 +51,11 @@ export async function signIn() {
 
 export async function signOut() {
   await fbSignOut(auth);
+}
+
+// Proves to the notification server that the request comes from the owner.
+export async function getIdToken() {
+  return auth.currentUser ? auth.currentUser.getIdToken() : '';
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -227,6 +233,7 @@ export async function sendChat(id, { from, text = '', image = '', sticker = '' }
   await updateDoc(doc(db, 'threads', id), from === 'owner'
     ? { lastAt: serverTimestamp(), lastText: preview({ text, image, sticker }), lastFrom: 'owner', unreadGuest: true }
     : { lastAt: serverTimestamp(), lastText: preview({ text, image, sticker }), lastFrom: 'guest', unreadOwner: true });
+  if (from !== 'owner') pingChat(id); // push notification to the owner
 }
 
 export async function markThreadRead(id, who) {

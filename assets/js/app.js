@@ -5,6 +5,7 @@ import { pendingImports, importCardsHTML, importProject } from './importer.js';
 import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
 import { CAL_EVENTS, RC_PLAN } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
+import { registerSW, pushStatus, enablePush, disablePush, testPush } from './push.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
   icon, toast, openModal, confirmDialog, resizeImage, isImageFile,
@@ -714,6 +715,7 @@ async function viewInbox(ctx, threadId) {
     <header class="page-head glass">
       <div><h1>${icon('inbox')} Inbox</h1>
       <p class="muted">Chats with visitors. Open one to reply.</p></div>
+      <div class="row"><button class="btn" data-act="push">${icon('bell')} Notifications</button></div>
     </header>
     <div class="threads"><div class="loading"><div class="spinner"></div></div></div>
     ${legacy.length ? `
@@ -850,7 +852,8 @@ async function viewCalendar(ctx) {
       <div class="row">
         <button class="btn" data-act="export-cal" title="Download for Apple or Google Calendar">${icon('calendar')} Add to my calendar</button>
         <button class="btn" data-act="export-rc" title="RC plane plan with an 8 AM reminder each day">${icon('calendar')} Add RC plan to my calendar</button>
-        ${state.owner ? `<button class="btn primary" data-act="new-event">${icon('plus')} New event</button>` : ''}
+        ${state.owner ? `<button class="btn" data-act="push">${icon('bell')} Reminders</button>
+        <button class="btn primary" data-act="new-event">${icon('plus')} New event</button>` : ''}
       </div>
     </header>
     <div class="cal"></div>`);
@@ -1430,6 +1433,71 @@ async function deleteItemFlow(id) {
   location.hash = `#/${s.key}`;
 }
 
+// ── Notifications (owner) ───────────────────────────────────
+const PUSH_WHAT = `
+  <ul class="push-list">
+    <li>💬 New chat messages from visitors</li>
+    <li>✈️ 8 AM: today's RC plane task</li>
+    <li>📝 8 AM: tests today and tomorrow, and your own events</li>
+    <li>⏰ 2 hours before each test</li>
+  </ul>`;
+
+async function openPushPanel() {
+  const status = await pushStatus().catch(() => 'unsupported');
+  const body = {
+    install: `
+      <p>On iPad and iPhone, notifications only work in the Home Screen app.</p>
+      <ol class="push-list">
+        <li>In Safari, tap <strong>Share → Add to Home Screen</strong>.</li>
+        <li>Open <strong>Husni O.</strong> from your Home Screen.</li>
+        <li>Sign in there, then tap <strong>Notifications</strong> again.</li>
+      </ol>`,
+    unsupported: `<p>This browser can't show notifications. On iPad or iPhone, update to iPadOS / iOS 16.4 or later and use the Home Screen app.</p>`,
+    denied: `<p>Notifications are blocked for this site.</p>
+      <p class="muted">iPad / iPhone: <strong>Settings → Notifications → Husni O. → Allow Notifications</strong>.
+      On a computer, allow them in the site settings (the icon left of the address bar). Then come back here.</p>`,
+    off: `<p>Get notified on this device:</p>${PUSH_WHAT}
+      <div class="row end"><button class="btn primary" data-p="on">${icon('bell')} Turn on notifications</button></div>`,
+    on: `<p><strong>✅ On for this device.</strong></p>${PUSH_WHAT}
+      <div class="row end">
+        <button class="btn" data-p="off">Turn off</button>
+        <button class="btn primary" data-p="test">${icon('bell')} Send a test</button>
+      </div>`,
+  }[status];
+
+  openModal({
+    title: 'Notifications',
+    body,
+    onMount(el, close) {
+      el.addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-p]');
+        if (!b) return;
+        b.disabled = true;
+        try {
+          if (b.dataset.p === 'on') {
+            await enablePush(api.getIdToken); // asks for permission first, while it's still a tap
+            close();
+            await testPush(api.getIdToken);
+            toast('Notifications are on. A test notification is on its way.');
+          } else if (b.dataset.p === 'test') {
+            const r = await testPush(api.getIdToken);
+            toast(r.sent ? `Test sent to ${r.sent} device${r.sent > 1 ? 's' : ''}.` : 'No device got it. Try turning notifications off and on again.', r.sent ? 'ok' : 'error');
+          } else if (b.dataset.p === 'off') {
+            await disablePush(api.getIdToken);
+            close();
+            toast('Notifications are off on this device.');
+          }
+        } catch (err) {
+          console.error(err);
+          toast(friendlyError(err), 'error');
+        } finally {
+          b.disabled = false;
+        }
+      });
+    },
+  });
+}
+
 // ── Global events ───────────────────────────────────────────
 document.addEventListener('click', async (e) => {
   const el = e.target.closest('[data-act]');
@@ -1537,6 +1605,7 @@ document.addEventListener('click', async (e) => {
         downloadIcs(calEvents.length ? calEvents : CAL_EVENTS);
         toast('Calendar file downloaded. Open it to add the dates to your calendar.');
         break;
+      case 'push': openPushPanel(); break;
       case 'new-event': openEventEditor(); break;
       case 'edit-event': {
         const it = await api.getItem(id);
@@ -1658,6 +1727,7 @@ try {
   console.warn('Could not load profile', e);
 }
 renderChrome();
+registerSW();
 
 let firstAuth = true;
 api.onAuthChange(async (user) => {

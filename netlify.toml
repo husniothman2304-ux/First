@@ -1,0 +1,9 @@
+# Netlify settings. The site itself is plain files with no build step;
+# the only server code is the push-notification functions in netlify/functions.
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["firebase-admin", "web-push"]

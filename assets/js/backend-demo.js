@@ -84,6 +84,10 @@ export async function signIn() {
   emit();
 }
 
+export async function getIdToken() {
+  return ''; // demo mode has no notification server
+}
+
 export async function signOut() {
   current = null;
   try { localStorage.removeItem(AUTH_KEY); } catch { /* ignore */ }

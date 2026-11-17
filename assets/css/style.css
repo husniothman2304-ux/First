@@ -1974,3 +1974,7 @@ main { grid-template-columns: minmax(0, 1fr); }
 .prose table { margin: 0 0 1.2em; }
 .dp-wait { display: grid; place-items: center; width: 100%; height: 100%; color: var(--muted); font-weight: 700; }
 .dp-wait .spinner { width: 20px; height: 20px; border-width: 2px; }
+
+/* ── Notifications panel ── */
+.push-list { margin: 10px 0 16px; padding-left: 22px; line-height: 1.75; }
+.push-list li::marker { color: var(--muted, #8b93a1); }
