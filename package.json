@@ -2,9 +2,11 @@
   "name": "husni-site",
   "private": true,
   "description": "Static site. Dependencies here are only for the Netlify Functions in netlify/functions (push notifications).",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
-    "firebase-admin": "14.5.0",
+    "firebase-admin": "13.10.0",
     "web-push": "3.6.7"
   }
 }
