@@ -2,6 +2,12 @@
 # the only server code is the push-notification functions in netlify/functions.
 [build.environment]
   NODE_VERSION = "22"
+  # The publish directory is the repo root, so the secrets scanner also reads
+  # node_modules (Firebase/Google SDKs ship placeholder "BEGIN PRIVATE KEY"
+  # examples in their docs) and the public Firebase web config, whose apiKey
+  # is a public identifier, not a secret. Real credentials such as
+  # FIREBASE_SERVICE_ACCOUNT stay only in Netlify environment variables.
+  SECRETS_SCAN_OMIT_PATHS = "node_modules/**,assets/js/config.js"
 
 [functions]
   directory = "netlify/functions"
