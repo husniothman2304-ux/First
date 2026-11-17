@@ -7,6 +7,11 @@
   # key file shares with sample files inside node_modules (e.g. the
   # "type": "service_account" line in google-auth-library's README).
   SECRETS_SCAN_OMIT_KEYS = "FIREBASE_SERVICE_ACCOUNT"
+  # The publish directory is the repo root, so the scanner also reads
+  # node_modules (Firebase/Google SDKs ship placeholder "BEGIN PRIVATE KEY"
+  # examples) and the Firebase web config, whose apiKey is a public
+  # identifier, not a secret. (From the Netlify agent's PR #1.)
+  SECRETS_SCAN_OMIT_PATHS = "node_modules/**,assets/js/config.js"
 
 [functions]
   directory = "netlify/functions"
