@@ -7,7 +7,7 @@ export default async (req, ctx) => {
     lib = await import('../lib/push.mjs');
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: 'The notification server failed to start.', detail: String((e && e.stack) || e).slice(0, 600), node: process.version }), {
+    return new Response(JSON.stringify({ error: 'The notification server failed to start. See the push-key function log in Netlify.' }), {
       status: 500, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
     });
   }
