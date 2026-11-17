@@ -1829,6 +1829,26 @@ input[type="date"] { color-scheme: dark; }
   .tabbar a { font-size: 9.5px; gap: 1px; padding: 6px 0; letter-spacing: -0.01em; }
   .tabbar a .icon { width: 21px; height: 21px; }
 }
+/* Phone menu sits at the top, under the name bar, so nothing pinned to the
+   bottom of the screen (like the Netlify badge or Safari's toolbar) covers it. */
+@media (max-width: 760px) {
+  :root { --tabbar-h: 58px; }
+  body { padding-top: calc(var(--topbar-h) + 12px + 8px + var(--tabbar-h) + env(safe-area-inset-top, 0px)); }
+  .tabbar {
+    top: calc(12px + var(--topbar-h) + 8px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    min-height: var(--tabbar-h);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  .footer { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+  #toasts { bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .chat { scroll-margin-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); scroll-margin-top: calc(var(--topbar-h) + var(--tabbar-h) + 32px); }
+  html { scroll-padding-top: calc(var(--topbar-h) + var(--tabbar-h) + 32px); }
+}
 
 /* ── Project build pages ──────────────────────────────── */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

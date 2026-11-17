@@ -1,7 +1,7 @@
 // Calendar for session 2026/2027 (UTM Johor Bahru).
 // Sources: UTM Academic Calendar 2026/2027 (Johor holidays only, KL-only
 // holidays left out) and the FKM Test Timetable, Semester I 2026/2027
-// (second-year SEMM 2xxx subjects + SSCE2193 only).
+// (updated Nov 2026; only the 5 subjects I take).
 //
 // To change something, edit this list. Dates are YYYY-MM-DD; `end` is the
 // last day (inclusive). Types: test, holiday, break, exam, revision, milestone.
@@ -42,21 +42,21 @@ export const CAL_EVENTS = [
   { type: 'holiday', title: 'Merdeka Day', start: '2027-08-31' },
   { type: 'holiday', title: 'Malaysia Day', start: '2027-09-16' },
 
-  // ── Tests, Semester I (second year) ──
+  // ── Tests, Semester I: my 5 subjects only ──
+  // Fluid Mechanics I, Solid Mechanics II, Thermodynamics,
+  // Machine Dynamics & Vibration, Materials Science.
   // Test 1
-  { type: 'test', test: 'Test 1', code: 'SEMM2413', title: 'Thermodynamics', start: '2026-11-11', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK3 (L50), DK4–DK6 (P19), DK8–DK9 (N24), 417/419/420 (C25)' },
-  { type: 'test', test: 'Test 1', code: 'SEMM2223', title: 'Mechanics of Machines & Vibration', start: '2026-11-13', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK4, DK5, DK6 (P19)' },
-  { type: 'test', test: 'Test 1', code: 'SSCE2193', title: 'Engineering Statistics', start: '2026-11-18', time: '8.00 – 10.00 PM', t: '20:00-22:00', venue: '' },
-  { type: 'test', test: 'Test 1', code: 'SEMM2313', title: 'Mechanics of Fluids I', start: '2026-11-21', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8, DK9 (N24), DK4–DK6 (P19)' },
-  { type: 'test', test: 'Test 1', code: 'SEMM2123', title: 'Mechanics of Solids II', start: '2026-11-27', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8 (N24), DK4–DK6 (P19)' },
-  { type: 'test', test: 'Test 1', code: 'SEMM2613', title: 'Materials Science', start: '2026-11-28', time: '3.00 – 5.00 PM', t: '15:00-17:00', venue: 'DK8 (N24), DK4–DK6 (P19)' },
+  { type: 'test', test: 'Test 1', code: 'SEMM2413', title: 'Thermodynamics', start: '2026-11-11', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK4, DK5, DK6 (P19), DK8, DK9 (N24)' },
+  { type: 'test', test: 'Test 1', code: 'SEMM2223', title: 'Machine Dynamics & Vibration', start: '2026-11-13', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK4, DK5, DK6 (P19)' },
+  { type: 'test', test: 'Test 1', code: 'SEMM2313', title: 'Fluid Mechanics I', start: '2026-11-21', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8, DK9 (N24), DK4, DK5, DK6 (P19)' },
+  { type: 'test', test: 'Test 1', code: 'SEMM2123', title: 'Solid Mechanics II', start: '2026-11-27', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8 (N24), DK4, DK5, DK6 (P19)' },
+  { type: 'test', test: 'Test 1', code: 'SEMM2613', title: 'Materials Science', start: '2026-11-28', time: '3.00 – 5.00 PM', t: '15:00-17:00', venue: 'DK8 (N24), DK4, DK5, DK6 (P19)' },
   // Test 1.5
-  { type: 'test', test: 'Test 1.5', code: 'SEMM2413', title: 'Thermodynamics', start: '2026-12-07', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK1–DK3 (L50), DK4–DK6 (P19), DK8–DK9 (N24)' },
+  { type: 'test', test: 'Test 1.5', code: 'SEMM2413', title: 'Thermodynamics', start: '2026-12-07', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK4, DK5, DK6 (P19), DK8, DK9 (N24)' },
   // Test 2
-  { type: 'test', test: 'Test 2', code: 'SSCE2193', title: 'Engineering Statistics', start: '2026-12-28', time: '8.00 – 10.00 PM', t: '20:00-22:00', venue: '' },
-  { type: 'test', test: 'Test 2', code: 'SEMM2313', title: 'Mechanics of Fluids I', start: '2027-01-07', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8, DK9 (N24), DK4–DK6 (P19)' },
-  { type: 'test', test: 'Test 2', code: 'SEMM2123', title: 'Mechanics of Solids II', start: '2027-01-09', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8 (L50), DK4–DK6 (P19)' },
-  { type: 'test', test: 'Test 2', code: 'SEMM2223', title: 'Mechanics of Machines & Vibration', start: '2027-01-13', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK1 (L50), DK8, DK9 (N24)' },
-  { type: 'test', test: 'Test 2', code: 'SEMM2413', title: 'Thermodynamics', start: '2027-01-14', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK1–DK3 (L50), DK4–DK6 (P19), DK8–DK9 (N24)' },
-  { type: 'test', test: 'Test 2', code: 'SEMM2613', title: 'Materials Science', start: '2027-01-16', time: '3.00 – 5.00 PM', t: '15:00-17:00', venue: 'DK1, DK2 (L50), DK4–DK6 (P19)' },
+  { type: 'test', test: 'Test 2', code: 'SEMM2313', title: 'Fluid Mechanics I', start: '2027-01-07', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8, DK9 (N24), DK4, DK5, DK6 (P19)' },
+  { type: 'test', test: 'Test 2', code: 'SEMM2123', title: 'Solid Mechanics II', start: '2027-01-09', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK8 (L50), DK4, DK5, DK6 (P19)' },
+  { type: 'test', test: 'Test 2', code: 'SEMM2223', title: 'Machine Dynamics & Vibration', start: '2027-01-13', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK1 (L50), DK8, DK9 (N24)' },
+  { type: 'test', test: 'Test 2', code: 'SEMM2413', title: 'Thermodynamics', start: '2027-01-14', time: '9.00 – 11.00 PM', t: '21:00-23:00', venue: 'DK4, DK5, DK6 (P19), DK8, DK9 (N24)' },
+  { type: 'test', test: 'Test 2', code: 'SEMM2613', title: 'Materials Science', start: '2027-01-16', time: '3.00 – 5.00 PM', t: '15:00-17:00', venue: 'DK1, DK2 (L50), DK4, DK5, DK6 (P19)' },
 ];
