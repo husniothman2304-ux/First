@@ -2,6 +2,11 @@
 # the only server code is the push-notification functions in netlify/functions.
 [build.environment]
   NODE_VERSION = "22"
+  # The service account is only used by the functions at runtime, never by
+  # the build. Without this, Netlify's secret scanner flags lines that the
+  # key file shares with sample files inside node_modules (e.g. the
+  # "type": "service_account" line in google-auth-library's README).
+  SECRETS_SCAN_OMIT_KEYS = "FIREBASE_SERVICE_ACCOUNT"
 
 [functions]
   directory = "netlify/functions"
