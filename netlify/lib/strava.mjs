@@ -50,6 +50,7 @@ export async function startConnect(origin) {
     response_type: 'code',
     approval_prompt: 'auto',
     scope: 'activity:read',
+    state, // Strava sends this back; the callback checks it matches
   });
   return `https://www.strava.com/oauth/authorize?${q}`;
 }
