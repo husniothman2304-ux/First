@@ -20,7 +20,7 @@ const CONTACT = 'mailto:noreply@husniothmaninmaya.netlify.app';
 
 function serviceAccount() {
   let raw = (process.env.FIREBASE_SERVICE_ACCOUNT || '').trim();
-  if (!raw) throw new HttpError(503, 'Notifications are not set up yet: FIREBASE_SERVICE_ACCOUNT is missing in Netlify.');
+  if (!raw) throw new HttpError(503, 'The server is not set up yet: FIREBASE_SERVICE_ACCOUNT is missing in Netlify.');
   // Pasting on a phone can turn quotes into “smart quotes”.
   raw = raw.replace(/[“”]/g, '"');
   let sa;

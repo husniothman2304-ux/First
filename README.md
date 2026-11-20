@@ -104,3 +104,15 @@ whole service-account JSON file (Firebase console → Project settings → Servi
 accounts → Generate new private key). Never commit that file. The Web Push keys
 are created automatically and stored in Firestore under `push/`, which has no
 rule in `firestore.rules`, so browsers can't read it.
+
+## Strava (Latest from Strava on Activities)
+
+Netlify Functions (`netlify/functions/strava-*.mjs`) sync your Strava activities
+every 30 minutes. Only activities set to "Everyone" on Strava are shown, as stats
+only (no maps or coordinates).
+
+Setup: create an API app at strava.com/settings/api (Authorization Callback
+Domain: your Netlify domain), add `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET`
+as Netlify environment variables, then sign in on the site and press
+**Connect Strava** on the Activities page. Tokens are stored in Firestore under
+`strava/`, which browsers can't read.

@@ -6,6 +6,7 @@ import { mountCalendar, downloadIcs, TYPES as CAL_TYPES } from './calendar.js';
 import { CAL_EVENTS, RC_PLAN } from './calendar-data.js';
 import { DEFAULT_PROFILE } from './config.js';
 import { registerSW, pushStatus, enablePush, disablePush, testPush } from './push.js';
+import { mountStrava, stravaReturnToast } from './strava.js';
 import {
   $, $$, esc, md, plain, safeUrl, imgSrc, hasImg, fsImageId, fmtDate, debounce, store, friendlyError,
   icon, toast, openModal, confirmDialog, resizeImage, isImageFile,
@@ -442,7 +443,9 @@ async function viewSection(ctx, s) {
         ${state.owner ? newButton(s) : ''}
       </div>
     </header>
+    ${s.type === 'photo' ? '<section class="block strava" aria-label="Latest from Strava"></section>' : ''}
     <div id="list">${items.length ? sectionBody(s, items) : emptyHTML(s)}</div>`);
+  if (ok && s.type === 'photo') mountStrava($('.strava', ctx.view), { owner: state.owner, getToken: api.getIdToken });
   if (ok && state.owner && s.type === 'project') {
     const pending = await pendingImports(items);
     if (pending.length && !ctx.stale()) $('#list', ctx.view).insertAdjacentHTML('beforebegin', importCardsHTML(pending));
@@ -1728,6 +1731,7 @@ try {
 }
 renderChrome();
 registerSW();
+stravaReturnToast();
 
 let firstAuth = true;
 api.onAuthChange(async (user) => {
