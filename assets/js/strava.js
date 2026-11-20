@@ -135,12 +135,14 @@ export async function mountStrava(el, { owner = false, getToken }) {
 
 // After Strava sends the owner back: show how it went, then tidy the address.
 export function stravaReturnToast() {
-  const r = new URLSearchParams(location.search).get('strava');
+  const q = new URLSearchParams(location.search);
+  const r = q.get('strava');
   if (!r) return;
+  const why = (q.get('why') || '').slice(0, 160);
   const msg = {
     connected: ['Strava connected. Your public activities now show on Activities.', 'ok'],
     denied: ['Strava connection was cancelled.', 'info'],
-    failed: ['Strava could not be connected. Try again.', 'error'],
+    failed: [`Strava could not be connected. ${why || 'Try again.'}`, 'error'],
   }[r];
   if (msg) toast(msg[0], msg[1]);
   history.replaceState(null, '', location.pathname + location.hash);
