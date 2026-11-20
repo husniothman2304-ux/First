@@ -18,7 +18,11 @@ const API = 'https://www.strava.com/api/v3';
 function creds() {
   const id = (process.env.STRAVA_CLIENT_ID || '').trim();
   const secret = (process.env.STRAVA_CLIENT_SECRET || '').trim();
-  if (!id || !secret) throw new HttpError(503, 'Strava is not set up yet: add STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET in Netlify.');
+  if (!id || !secret) {
+    const missing = [!id && 'STRAVA_CLIENT_ID', !secret && 'STRAVA_CLIENT_SECRET'].filter(Boolean).join(' and ');
+    const typo = Object.keys(process.env).filter((k) => /STRAVA/i.test(k) && !['STRAVA_CLIENT_ID', 'STRAVA_CLIENT_SECRET'].includes(k));
+    throw new HttpError(503, `Strava is not set up yet: Netlify has no ${missing}.${typo.length ? ` (Found ${typo.join(', ')}: check the spelling.)` : ''}`);
+  }
   return { id, secret };
 }
 
