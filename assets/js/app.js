@@ -26,13 +26,13 @@ const SECTIONS = [
   { key: 'projects', type: 'project', label: 'Projects', one: 'project', many: 'projects', icon: 'projects', blurb: 'Things I have built and am building.' },
   // Course entries are stored with type "note", so anything written as a note before shows up here.
   { key: 'course', type: 'note', label: 'Course', one: 'course note', many: 'course notes', icon: 'course', blurb: 'Notes, info and everything else from my course.' },
-  // The photo gallery, called "Dump" (as in photo dump). Photos are stored with type "photo".
-  { key: 'dump', type: 'photo', label: 'Dump', one: 'photo', many: 'photos', icon: 'photos', blurb: 'A photo dump: builds, moments and random stuff.' },
+  // Activities: photo posts (was called "Dump"). Stored with type "photo".
+  { key: 'activities', type: 'photo', label: 'Activities', one: 'activity', many: 'activities', icon: 'photos', blurb: 'What I get up to: builds, trips, moments and random stuff.' },
   // Lifestyle posts (stored with type "blog", so older blog posts appear here too).
   { key: 'lifestyle', type: 'blog', label: 'Lifestyle', one: 'lifestyle post', many: 'lifestyle posts', icon: 'lifestyle', blurb: 'Life outside the workshop: habits, places, food and everything in between.' },
 ];
-// Old page names: Notes became Course, Photos became Dump, Blog became Lifestyle.
-const OLD_SECTIONS = { notes: 'course', photos: 'dump', blog: 'lifestyle' };
+// Old page names: Notes became Course, Photos/Dump became Activities, Blog became Lifestyle.
+const OLD_SECTIONS = { notes: 'course', photos: 'activities', dump: 'activities', blog: 'lifestyle' };
 const byKey = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
 const byType = Object.fromEntries(SECTIONS.map((s) => [s.type, s]));
 const HOME_LIMIT = { project: 3, note: 4, photo: 6, blog: 3 };
@@ -356,7 +356,7 @@ async function viewHome(ctx) {
       </div>
     </section>`;
 
-  const EYEBROW = { project: 'Things I build', note: "What I'm learning", photo: 'Photo dump', blog: 'Life outside the workshop' };
+  const EYEBROW = { project: 'Things I build', note: "What I'm learning", photo: 'Out and about', blog: 'Life outside the workshop' };
   let n = 0;
   const blocks = SECTIONS.map((s) => {
     const list = items.filter((i) => i.type === s.type);
@@ -965,7 +965,7 @@ function openTypePicker() {
   openModal({
     title: 'Add something',
     body: `<div class="picker">${SECTIONS.map((s) => `
-      <button type="button" class="pick glass" data-type="${s.type}">${icon(s.icon, 'xl')}<span>${s.type === 'photo' ? 'Photos to Dump' : `New ${s.one}`}</span></button>`).join('')}
+      <button type="button" class="pick glass" data-type="${s.type}">${icon(s.icon, 'xl')}<span>${s.type === 'photo' ? 'New activity' : `New ${s.one}`}</span></button>`).join('')}
     </div>`,
     onMount(el, close) {
       $$('.pick', el).forEach((b) => b.addEventListener('click', () => {
@@ -1219,7 +1219,7 @@ function openDumpEditor(item = null, initialFiles = []) {
   const addFiles = (files) => {
     let skipped = 0;
     for (const f of files) {
-      if (entries.length >= MAX_DUMP_PHOTOS) { toast(`A dump can have up to ${MAX_DUMP_PHOTOS} photos.`, 'error'); break; }
+      if (entries.length >= MAX_DUMP_PHOTOS) { toast(`An activity can have up to ${MAX_DUMP_PHOTOS} photos.`, 'error'); break; }
       if (!isImageFile(f)) { skipped++; continue; }
       const entry = { kind: 'new', file: f, preview: '' };
       entries.push(entry);
@@ -1230,11 +1230,11 @@ function openDumpEditor(item = null, initialFiles = []) {
   };
   addFiles(initialFiles);
   const it = item || { title: '', body: '', published: true };
-  const submitLabel = item ? 'Save changes' : 'Post dump';
+  const submitLabel = item ? 'Save changes' : 'Post activity';
   let busy = false;
 
   openModal({
-    title: item ? 'Edit dump' : 'New dump',
+    title: item ? 'Edit activity' : 'New activity',
     wide: true,
     locked: true,
     body: `
@@ -1244,7 +1244,7 @@ function openDumpEditor(item = null, initialFiles = []) {
         <label>Title <span class="muted">(optional)</span>
           <input name="title" maxlength="140" placeholder="e.g. Weekend at the flying field" value="${esc(it.title || '')}"></label>
         <label>Description <span class="muted">(optional)</span>
-          <textarea name="body" rows="4" placeholder="What's this dump about?">${esc(it.body || '')}</textarea></label>
+          <textarea name="body" rows="4" placeholder="What's this activity about?">${esc(it.body || '')}</textarea></label>
         <label class="switch">
           <input type="checkbox" name="published" ${it.published ? 'checked' : ''}>
           <span class="track"></span>
@@ -1343,7 +1343,7 @@ function openDumpEditor(item = null, initialFiles = []) {
           busy = false;
           close();
           if (failed) toast(`Posted, but ${failed} photo${failed > 1 ? 's' : ''} couldn't be uploaded: ${friendlyError(firstError)}`, 'error');
-          else toast(item ? 'Dump saved' : 'Dump posted');
+          else toast(item ? 'Activity saved' : 'Activity posted');
           const target = `#/p/${encodeURIComponent(id)}`;
           if (location.hash === target) route({ keepScroll: true });
           else location.hash = target;

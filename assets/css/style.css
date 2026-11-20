@@ -1167,7 +1167,7 @@ label .muted { font-weight: 450; }
 .bg[data-scene="about"] { --leak-h: 9; }
 .bg[data-scene="projects"] { --leak-h: 26; }
 .bg[data-scene="course"] { --leak-h: 205; }
-.bg[data-scene="dump"] { --leak-h: 332; }
+.bg[data-scene="activities"] { --leak-h: 332; }
 .bg[data-scene="lifestyle"] { --leak-h: 42; }
 .bg[data-scene="contact"] { --leak-h: 262; }
 
@@ -1593,7 +1593,7 @@ a { color: var(--link); }
 .bg[data-scene="about"] { background-position: 30% 20%; }
 .bg[data-scene="projects"] { background-position: 85% 10%; }
 .bg[data-scene="course"] { background-position: 10% 80%; }
-.bg[data-scene="dump"] { background-position: 70% 75%; }
+.bg[data-scene="activities"] { background-position: 70% 75%; }
 .bg[data-scene="lifestyle"] { background-position: 50% 45%; }
 .bg[data-scene="contact"] { background-position: 95% 95%; }
 .bg[data-scene="calendar"] { background-position: 15% 45%; }
